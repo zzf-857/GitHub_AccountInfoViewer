@@ -1,229 +1,229 @@
-# GitHub Starred Repositories Dashboard Design
+# GitHub Star 仓库仪表盘设计
 
-## Goal
+## 目标
 
-Build a high-readability dark data product for reviewing a personal GitHub starred repository collection. The dashboard should help the user understand technical interests, collection structure, and notable repositories with low visual fatigue.
+构建一个高可读性的深色数据产品，用于查看个人 GitHub Star 仓库集合。该仪表盘应帮助用户理解技术兴趣、收藏结构和重点仓库，并尽量降低视觉疲劳。
 
-## Current Problems
+## 当前问题
 
-- Information density is too high.
-- Text is too small for long reading.
-- Charts and tables compete for attention.
-- Too many borders create visual noise.
-- The repository list is difficult to scan.
+- 信息密度过高。
+- 文本过小，不利于长时间阅读。
+- 图表与表格彼此抢夺注意力。
+- 边框过多造成视觉噪音。
+- 仓库列表难以快速扫读。
 
-## Recommended Direction: Insight Console
+## 推荐方向：Insight Console（洞察控制台）
 
-Use an insight-first dashboard modeled after restrained dark data products such as GitHub, Linear, Vercel, and Stripe Dashboard. The experience should prioritize reading and decision-making over raw density.
+采用一种“洞察优先”的仪表盘风格，参考 GitHub、Linear、Vercel、Stripe Dashboard 这类克制的深色数据产品。体验应优先服务于阅读与决策，而不是堆叠原始信息密度。
 
-The page should guide the user through this order:
+页面应按以下顺序引导用户：
 
-1. See account and sync status.
-2. Read the main collection insights.
-3. Understand language and topic structure.
-4. Scan repositories comfortably.
-5. Open details only when needed.
+1. 先看到账号与同步状态。
+2. 阅读主要集合洞察。
+3. 理解语言与主题结构。
+4. 舒适地扫读仓库。
+5. 仅在需要时展开详情。
 
-## Information Architecture
+## 信息架构
 
-Primary structure:
+主结构：
 
-- Top utility bar: account, last sync time, refresh state, global search.
-- Insight summary: 3 to 5 plain-language findings about the current starred collection.
-- KPI row: total repositories, active languages, top topic, recently starred count.
-- Interest structure: language distribution, top topics, recent star timeline.
-- Repository list: scan-first list with filters and saved views.
-- Detail drawer: expanded metadata, description, topics, links, and notes.
+- 顶部工具栏：账号、最近同步时间、刷新状态、全局搜索。
+- 洞察摘要：3 到 5 条关于当前 Star 集合的自然语言结论。
+- KPI 行：仓库总数、活跃语言数、热门主题、最近加星数量。
+- 兴趣结构：语言分布、热门主题、最近 Star 时间线。
+- 仓库列表：以扫描效率优先的列表，带筛选和保存视图。
+- 详情抽屉：展开元数据、描述、主题、链接和备注。
 
-The repository list is the main reading surface. Charts support the list instead of dominating the page.
+仓库列表是主要阅读区。图表应该服务于列表，而不是主导页面。
 
-## Layout
+## 布局
 
-Use a two-column desktop layout:
+使用双栏桌面布局：
 
-- Left sidebar: 240px to 260px, dedicated to filters and saved views.
-- Main content: fluid width, max readable content width around 1440px.
-- Main spacing: 24px page padding, 20px between major sections, 12px to 16px inside compact groups.
+- 左侧边栏：240px 到 260px，用于筛选与保存视图。
+- 主内容区：流式宽度，最大可读宽度约 1440px。
+- 主间距：页面内边距 24px；主要区块之间 20px；紧凑组内 12px 到 16px。
 
-Desktop main content order:
+桌面主内容顺序：
 
-1. Top utility bar.
-2. Insight summary band.
-3. KPI row.
-4. Chart row.
-5. Repository list.
+1. 顶部工具栏。
+2. 洞察摘要带。
+3. KPI 行。
+4. 图表行。
+5. 仓库列表。
 
-Mobile and narrow layout:
+移动端与窄屏布局：
 
-- Filters collapse into a top sheet or horizontal filter chips.
-- Charts stack vertically.
-- Repository cards become single-column rows.
+- 筛选折叠为顶部抽屉或横向筛选 chips。
+- 图表垂直堆叠。
+- 仓库卡片变为单列行。
 
-## Typography And Readability
+## 字体与可读性
 
-Increase the overall text scale. The dashboard should feel readable at normal desktop distance without browser zoom.
+整体文字比例应增大。在常见桌面观看距离下，无需浏览器缩放也应清晰可读。
 
-Recommended type scale:
+推荐字号体系：
 
-- Page title: 30px font size, 38px line height, weight 600.
-- Section title: 20px font size, 30px line height, weight 600.
-- KPI value: 34px font size, 40px line height, weight 600.
-- Repository title: 17px font size, 26px line height, weight 600.
-- Main body and repository description: 16px font size, 26px line height, weight 400.
-- Filter controls and buttons: 15px font size, 22px line height, weight 500.
-- Metadata and helper text: 14px font size, 22px line height, weight 400.
-- Tags and chart labels: 13px font size, 18px line height, weight 500.
+- 页面标题：30px 字号，38px 行高，600 字重。
+- 区块标题：20px 字号，30px 行高，600 字重。
+- KPI 数值：34px 字号，40px 行高，600 字重。
+- 仓库标题：17px 字号，26px 行高，600 字重。
+- 正文与仓库描述：16px 字号，26px 行高，400 字重。
+- 筛选控件与按钮：15px 字号，22px 行高，500 字重。
+- 元数据与辅助文案：14px 字号，22px 行高，400 字重。
+- 标签与图表标签：13px 字号，18px 行高，500 字重。
 
-Hard limits:
+硬性限制：
 
-- No primary reading text below 15px.
-- No chart labels below 13px.
-- Repository descriptions should use at least 16px.
-- Avoid negative letter spacing.
-- Use 1.55 to 1.65 line-height for paragraphs and descriptions.
+- 主阅读文本不得低于 15px。
+- 图表标签不得低于 13px。
+- 仓库描述至少 16px。
+- 避免负字距。
+- 段落与描述行高使用 1.55 到 1.65。
 
-## Color System
+## 色彩系统
 
-Use neutral dark surfaces with restrained accents:
+使用中性深色表面与克制强调色：
 
-- Page background: `#0A0A0B`.
-- Primary surface: `#111214`.
-- Raised surface: `#17181B`.
-- Hover surface: `#1D1F23`.
-- Primary text: `#F3F4F6`.
-- Secondary text: `#A3AAB5`.
-- Muted text: `#717985`.
-- Hairline border: `rgba(255,255,255,0.08)`.
-- Strong border: `rgba(255,255,255,0.14)`.
-- Accent teal: `#3DD6C6`.
-- Accent green: `#8BD17C`.
-- Accent amber: `#F4C95D`.
-- Accent rose: `#FF7A90`.
+- 页面背景：`#0A0A0B`。
+- 主表面：`#111214`。
+- 悬浮表面：`#17181B`。
+- Hover 表面：`#1D1F23`。
+- 主文本：`#F3F4F6`。
+- 次文本：`#A3AAB5`。
+- 弱化文本：`#717985`。
+- 细边框：`rgba(255,255,255,0.08)`。
+- 强边框：`rgba(255,255,255,0.14)`。
+- 强调青色：`#3DD6C6`。
+- 强调绿色：`#8BD17C`。
+- 强调琥珀色：`#F4C95D`。
+- 强调玫瑰色：`#FF7A90`。
 
-Avoid dominant purple-blue gradients, dense border grids, and one-color themes. Accent colors should be used for meaning, not decoration.
+避免使用主导性的紫蓝渐变、密集边框网格和单色主题。强调色应用于“表达含义”，而非“装饰”。
 
-## Chart Design
+## 图表设计
 
-Charts should answer one question each and remain visually subordinate to insights and the repository list.
+每个图表只回答一个问题，并在视觉层级上低于洞察和仓库列表。
 
-Recommended chart modules:
+推荐图表模块：
 
-- Top languages: horizontal bar chart, sorted descending, top 8 to 10 items.
-- Topic map: compact ranked topic chips or a restrained treemap.
-- Recent stars: simple timeline or monthly histogram.
+- 顶部语言：横向条形图，按降序，前 8 到 10 项。
+- 主题图：紧凑型主题排名 chips 或克制的矩形树图。
+- 最近加星：简洁时间线或按月柱状图。
 
-Chart rules:
+图表规则：
 
-- Prefer horizontal bars over pie charts for readability.
-- Place one natural-language insight under each chart.
-- Use large chart labels, at least 13px.
-- Keep chart height around 240px to 280px.
-- Reduce grid lines and axis noise.
-- Use muted colors for non-selected data and one accent for focus.
+- 为可读性优先使用横向条形图，而非饼图。
+- 每个图表下方放一条自然语言结论。
+- 图表标签需足够大，至少 13px。
+- 图表高度控制在约 240px 到 280px。
+- 减少网格线与坐标轴噪音。
+- 非选中数据用低饱和色，聚焦数据用一个强调色。
 
-## Repository List
+## 仓库列表
 
-Replace dense table scanning with repository rows/cards.
+用仓库行/卡片替代密集表格扫描。
 
-Each repository row should contain:
+每个仓库行应包含：
 
-- Repository full name as the primary anchor.
-- Owner/repo hierarchy with owner muted and repo emphasized.
-- Description, clamped to 2 lines by default.
-- Language color dot and language name.
-- Stars, forks, last update date, and archived status when available.
-- Topic chips, limited to 3 to 5 visible chips.
-- Optional Chinese supplement, collapsed by default.
+- 仓库全名（主要锚点）。
+- owner/repo 层级（owner 弱化、repo 强调）。
+- 描述（默认截断为 2 行）。
+- 语言色点与语言名。
+- stars、forks、最后更新时间、归档状态（若有）。
+- 主题 chips，显示 3 到 5 个。
+- 可选中文补充信息，默认折叠。
 
-List readability rules:
+列表可读性规则：
 
-- Row height should be around 96px to 120px.
-- Row padding should be 18px to 20px.
-- Use 16px description text and 17px title text.
-- Use dividers sparingly; prefer spacing and hover surfaces over heavy borders.
-- Do not use vertical table grid lines.
-- Keep interactive controls aligned to predictable locations.
+- 行高约 96px 到 120px。
+- 行内边距约 18px 到 20px。
+- 描述用 16px，标题用 17px。
+- 少用分割线；优先通过间距和 hover 表面区分，而非重边框。
+- 不使用纵向表格网格线。
+- 交互控件位置应稳定、可预测。
 
-## Filtering And Interaction
+## 筛选与交互
 
-Primary filters:
+主要筛选项：
 
-- Search by repository name, owner, description, or topic.
-- Language.
-- Topic.
-- Last updated range.
-- Star count range.
-- Archived or active.
-- Has description / missing description.
+- 按仓库名、owner、描述或主题搜索。
+- 语言。
+- 主题。
+- 最近更新时间范围。
+- star 数范围。
+- 已归档 / 活跃。
+- 有描述 / 缺失描述。
 
-Interaction rules:
+交互规则：
 
-- Selected filters appear as removable chips above the list.
-- Global search supports keyboard focus with `/`.
-- Filter changes update result count immediately.
-- Saved views include: All, AI/LLM, Frontend, DevTools, Data, Recently Starred.
-- The result summary should explain the filtered set in plain language.
+- 已选筛选在列表上方以可移除 chips 展示。
+- 全局搜索支持 `/` 键聚焦。
+- 筛选变化后立即更新结果数量。
+- 保存视图包括：All、AI/LLM、Frontend、DevTools、Data、Recently Starred。
+- 结果摘要应以自然语言解释当前筛选集。
 
-Example summary:
+示例摘要：
 
-`42 repositories match. Most are TypeScript and Python projects, with AI tooling as the strongest topic.`
+`匹配到 42 个仓库。多数是 TypeScript 和 Python 项目，其中 AI 工具链是最强主题。`
 
-## Empty States
+## 空状态
 
-No data state:
+无数据状态：
 
-- Title: `No starred repositories loaded`
-- Body: `Connect a GitHub token or import an exported starred repository file to start exploring your collection.`
-- Actions: `Connect GitHub`, `Import file`, `Load sample data`.
+- 标题：`尚未加载已加星仓库`。
+- 文案：`连接 GitHub Token，或导入导出的已加星仓库文件，即可开始探索你的收藏。`
+- 操作：`连接 GitHub`、`导入文件`、`加载示例数据`。
 
-No filter results state:
+无筛选结果状态：
 
-- Title: `No repositories match these filters`
-- Body: `Try clearing search, widening the language filter, or resetting all filters.`
-- Actions: `Clear search`, `Reset filters`.
+- 标题：`没有仓库匹配当前筛选条件`。
+- 文案：`尝试清空搜索、放宽语言筛选范围，或重置全部筛选。`
+- 操作：`清空搜索`、`重置筛选`。
 
-## Loading States
+## 加载状态
 
-Use skeleton loading rather than a large spinner:
+使用骨架屏而非大号 loading spinner：
 
-- Top status skeleton.
-- KPI skeleton blocks.
-- Chart skeleton panels.
-- Repository row skeletons with title, metadata, and description lines.
+- 顶部状态骨架。
+- KPI 骨架块。
+- 图表骨架面板。
+- 仓库行骨架（标题、元数据、描述线）。
 
-When refreshing live data, keep the previous data visible and show a subtle status message:
+刷新实时数据时，保留旧数据可见，并显示轻提示：
 
-`Refreshing starred repositories... last data remains visible.`
+`正在刷新已加星仓库……当前数据显示保持可见。`
 
-## How This Improves Efficiency
+## 为什么能提升效率
 
-Reading efficiency improves because:
+阅读效率提升，因为：
 
-- Primary text is larger and line-height is more generous.
-- The list uses a single dominant scan path instead of table columns.
-- Metadata is secondary and visually quieter.
-- Charts answer specific questions instead of competing for attention.
-- Borders are replaced by spacing, surface changes, and typographic hierarchy.
+- 主文本更大，行高更舒适。
+- 列表采用单一主扫描路径，而非多列表格扫视。
+- 元数据降级，视觉更安静。
+- 图表回答具体问题，而不与主体抢注意力。
+- 用间距、表面层级、文字层级替代大量边框。
 
-Information retrieval improves because:
+信息检索效率提升，因为：
 
-- The top of the page summarizes insights before raw data.
-- Filters produce immediate plain-language summaries.
-- Saved views let the user revisit recurring interest areas quickly.
-- Repository details are deferred to a drawer, keeping the main list stable.
+- 页面顶部先给洞察结论，再给原始数据。
+- 筛选会即时生成自然语言摘要。
+- 保存视图让用户快速回到常见兴趣区域。
+- 详情放入抽屉，保持主列表稳定。
 
-## Alternative Direction: Library Map
+## 备选方向：Library Map（库地图）
 
-Library Map organizes repositories as a personal technical knowledge library.
+Library Map 把仓库组织成个人技术知识库。
 
-Structure:
+结构：
 
-- Left: topic tree.
-- Center: grouped repository collections.
-- Right: current topic insight panel.
+- 左：主题树。
+- 中：分组仓库集合。
+- 右：当前主题洞察面板。
 
-This direction is strong for long-term curation and knowledge review, but it needs stronger topic classification. It is better as a second phase after the Insight Console redesign.
+该方向适合长期整理和知识回顾，但对主题分类能力要求更高。更适合作为 Insight Console 改版后的第二阶段。
 
-## Recommendation
+## 建议
 
-Implement the Insight Console direction first. It addresses the current readability and fatigue issues directly while staying close to the existing dashboard architecture. The larger typography requirement should be treated as a core design constraint, not a later polish pass.
+优先实现 Insight Console 方向。它能直接解决当前可读性与视觉疲劳问题，同时保持与现有仪表盘架构接近。大字号需求应视为核心设计约束，而非后期润色。

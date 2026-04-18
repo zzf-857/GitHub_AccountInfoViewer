@@ -85,6 +85,22 @@ function renderSourceOptions(state) {
   sourceSel.innerHTML = options.join("");
 }
 
+function syncFilterControls(filters) {
+  const controlMap = {
+    globalSearch: "keyword",
+    lang: "language",
+    topicFilter: "topic",
+    descType: "descType",
+    statusFilter: "status",
+    starsFilter: "starRange",
+    updatedFilter: "updatedRange"
+  };
+  for (const [id, key] of Object.entries(controlMap)) {
+    const el = document.getElementById(id);
+    if (el) el.value = filters[key] || "";
+  }
+}
+
 async function bootstrap() {
   const store = DashboardStore.createStore();
   const view = DashboardView.createView();
@@ -182,9 +198,13 @@ async function bootstrap() {
   });
 
   function bindEvents() {
-    document.getElementById("kw").addEventListener("input", (e) => store.setFilters({ keyword: e.target.value }));
+    document.getElementById("globalSearch").addEventListener("input", (e) => store.setFilters({ keyword: e.target.value }));
     document.getElementById("lang").addEventListener("change", (e) => store.setFilters({ language: e.target.value }));
+    document.getElementById("topicFilter").addEventListener("change", (e) => store.setFilters({ topic: e.target.value }));
     document.getElementById("descType").addEventListener("change", (e) => store.setFilters({ descType: e.target.value }));
+    document.getElementById("statusFilter").addEventListener("change", (e) => store.setFilters({ status: e.target.value }));
+    document.getElementById("starsFilter").addEventListener("change", (e) => store.setFilters({ starRange: e.target.value }));
+    document.getElementById("updatedFilter").addEventListener("change", (e) => store.setFilters({ updatedRange: e.target.value }));
     document.getElementById("source").addEventListener("change", (e) => store.patch({ activeSource: e.target.value }));
     document.getElementById("manualRefresh").addEventListener("click", () => refresher.trigger("manual"));
     document.getElementById("clearCredentials").addEventListener("click", () => {
@@ -201,6 +221,31 @@ async function bootstrap() {
     document.getElementById("collapseAll").addEventListener("click", () => {
       view.setExpandZh(false);
       view.render(store.getState());
+    });
+    document.getElementById("savedViews").addEventListener("click", (e) => {
+      const button = e.target.closest("[data-view]");
+      if (!button) return;
+      const base = { keyword: "", language: "", descType: "", topic: "", status: "", starRange: "", updatedRange: "" };
+      const nextFilters = { ...base, ...DashboardInsights.getSavedViewFilter(button.dataset.view) };
+      store.setFilters(nextFilters);
+      syncFilterControls(store.getState().filters);
+    });
+    document.getElementById("filterChips").addEventListener("click", (e) => {
+      const button = e.target.closest("[data-filter-key]");
+      if (!button) return;
+      store.setFilters({ [button.dataset.filterKey]: "" });
+      syncFilterControls(store.getState().filters);
+    });
+    document.getElementById("resetFilters").addEventListener("click", () => {
+      store.setFilters({ keyword: "", language: "", descType: "", topic: "", status: "", starRange: "", updatedRange: "" });
+      syncFilterControls(store.getState().filters);
+    });
+    window.addEventListener("keydown", (e) => {
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+      const activeTag = document.activeElement?.tagName;
+      if (activeTag === "INPUT" || activeTag === "TEXTAREA" || activeTag === "SELECT") return;
+      e.preventDefault();
+      document.getElementById("globalSearch").focus();
     });
     window.addEventListener("resize", view.resize);
   }

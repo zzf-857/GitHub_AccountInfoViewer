@@ -20,19 +20,28 @@ function parseLinkHeader(linkHeader) {
 }
 
 function normalizeRepo(item, sourceAccount, sourceAccountLabel = "") {
-  const fullName = item.full_name || "";
-  const language = item.language || "Others (未分类)";
+  const repoItem = item.repo || item;
+  const fullName = repoItem.full_name || "";
+  const [owner = "", name = ""] = fullName.split("/");
+  const language = repoItem.language || "Others (未分类)";
   return {
     id: `${sourceAccount}:${fullName}`,
     fullName,
     repo: fullName,
-    description: item.description || "暂无简介",
-    url: item.html_url,
-    htmlUrl: item.html_url,
+    owner,
+    name,
+    description: repoItem.description || "暂无简介",
+    url: repoItem.html_url,
+    htmlUrl: repoItem.html_url,
     language,
+    stars: repoItem.stargazers_count || 0,
+    forks: repoItem.forks_count || 0,
+    updatedAt: repoItem.updated_at || null,
+    starredAt: item.starred_at || null,
+    archived: Boolean(repoItem.archived),
+    topics: Array.isArray(repoItem.topics) ? repoItem.topics : [],
     sourceAccount,
     sourceAccountLabel: sourceAccountLabel || sourceAccount,
-    starredAt: item.starred_at || null
   };
 }
 

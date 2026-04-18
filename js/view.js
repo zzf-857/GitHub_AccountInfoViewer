@@ -1,41 +1,9 @@
-function hasChinese(s) {
-  return /[\u4e00-\u9fff]/.test(s || "");
-}
-
-function zhAuto(desc) {
-  const d = (desc || "").trim();
-  if (!d || d === "暂无简介") return "暂无中文简介。";
-  if (hasChinese(d)) return "已包含中文简介。";
-  const rules = [
-    [/open[- ]source/i, "开源"], [/framework/i, "框架"], [/tool/i, "工具"], [/library/i, "库"],
-    [/platform/i, "平台"], [/editor/i, "编辑器"], [/automation/i, "自动化"], [/testing/i, "测试"],
-    [/game/i, "游戏"], [/unity/i, "Unity"], [/\bai\b/i, "AI"], [/model/i, "模型"]
-  ];
-  const tags = [];
-  for (const [re, cn] of rules) if (re.test(d) && !tags.includes(cn)) tags.push(cn);
-  return tags.length
-    ? `自动解读：这是一个与${tags.slice(0, 6).join("、")}相关的项目。`
-    : "自动解读：这是一个开发者相关项目，建议查看仓库 README 获取完整细节。";
-}
-
-function descKind(item) {
-  const d = (item.description || "").trim();
-  if (d === "暂无简介") return "empty";
-  return hasChinese(d) ? "zh" : "en";
-}
-
-function langAgg(items) {
-  const map = {};
-  for (const it of items) map[it.language] = (map[it.language] || 0) + 1;
-  return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-}
-
 function formatCountdown(nextRefreshAt) {
   if (!nextRefreshAt) return "--:--";
   const remain = Math.max(0, Math.floor((nextRefreshAt - Date.now()) / 1000));
-  const mm = String(Math.floor(remain / 60)).padStart(2, "0");
-  const ss = String(remain % 60).padStart(2, "0");
-  return `${mm}:${ss}`;
+  const minutes = String(Math.floor(remain / 60)).padStart(2, "0");
+  const seconds = String(remain % 60).padStart(2, "0");
+  return `${minutes}:${seconds}`;
 }
 
 function formatTime(ts) {
@@ -43,142 +11,245 @@ function formatTime(ts) {
   return new Date(ts).toLocaleTimeString("zh-CN", { hour12: false });
 }
 
+function formatDate(value) {
+  const time = Date.parse(value || "");
+  if (!time) return "未知更新";
+  return new Date(time).toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" });
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function sourceRepos(state) {
+  if (state.activeSource && state.activeSource.startsWith("account:")) {
+    const accountId = state.activeSource.replace("account:", "");
+    return state.accounts[accountId]?.repos || [];
+  }
+  return state.repos || [];
+}
+
+function languageColor(language) {
+  const colors = {
+    JavaScript: "#f4c95d",
+    TypeScript: "#6ca8ff",
+    Python: "#8bd17c",
+    Go: "#3dd6c6",
+    Rust: "#ff9b72",
+    Vue: "#42d392",
+    HTML: "#ff7a90",
+    CSS: "#b8a7ff"
+  };
+  return colors[language] || "#a3aab5";
+}
+
 function createView() {
-  let pieChart;
-  let barChart;
+  let languageChart;
+  let activityChart;
   let expandZh = false;
 
   function ensureCharts() {
-    if (!pieChart) pieChart = echarts.init(document.getElementById("pie"));
-    if (!barChart) barChart = echarts.init(document.getElementById("bar"));
+    if (!languageChart) languageChart = echarts.init(document.getElementById("languageChart"));
+    if (!activityChart) activityChart = echarts.init(document.getElementById("activityChart"));
   }
 
   function getFilteredRepos(state) {
-    const source = state.activeSource;
-    let repos = state.repos;
-    if (source.startsWith("account:")) {
-      const accountId = source.replace("account:", "");
-      repos = state.accounts[accountId]?.repos || [];
-    }
+    return DashboardInsights.filterRepositories(sourceRepos(state), state.filters);
+  }
 
-    const q = state.filters.keyword.trim().toLowerCase();
-    return repos.filter((r) => {
-      if (state.filters.language && r.language !== state.filters.language) return false;
-      if (state.filters.descType && descKind(r) !== state.filters.descType) return false;
-      if (!q) return true;
-      return (r.repo || "").toLowerCase().includes(q) || (r.description || "").toLowerCase().includes(q) || zhAuto(r.description).toLowerCase().includes(q);
-    });
+  function renderSelectOptions(selectId, rows, placeholder, currentValue) {
+    const select = document.getElementById(selectId);
+    const options = [`<option value="">${placeholder}</option>`];
+    for (const row of rows) options.push(`<option value="${escapeHtml(row.name)}">${escapeHtml(row.name)} (${row.value})</option>`);
+    select.innerHTML = options.join("");
+    if ([...select.options].some((option) => option.value === currentValue)) select.value = currentValue;
+  }
+
+  function renderFilterOptions(state) {
+    const repos = sourceRepos(state);
+    renderSelectOptions("lang", DashboardInsights.buildLanguageStats(repos), "全部语言", state.filters.language);
+    renderSelectOptions("topicFilter", DashboardInsights.buildTopicStats(repos).slice(0, 40), "全部主题", state.filters.topic);
+  }
+
+  function renderInsights(state, filtered) {
+    const cards = DashboardInsights.buildInsightCards(sourceRepos(state), filtered);
+    document.getElementById("insightSummary").innerHTML = cards.map((card) => `
+      <article class="insight-card">
+        <h3>${escapeHtml(card.title)}</h3>
+        <p>${escapeHtml(card.body)}</p>
+      </article>
+    `).join("");
   }
 
   function renderKpi(state, filtered) {
-    const repos = state.repos;
-    const enOnly = repos.filter((r) => descKind(r) === "en").length;
-    const zhCount = repos.filter((r) => descKind(r) === "zh").length;
-    const empty = repos.filter((r) => descKind(r) === "empty").length;
-    const langSet = new Set(repos.map((r) => r.language));
-    const enRatio = repos.length ? ((enOnly / repos.length) * 100).toFixed(1) : "0.0";
+    const repos = sourceRepos(state);
+    const languageCount = DashboardInsights.buildLanguageStats(repos).length;
+    const topicCount = DashboardInsights.buildTopicStats(repos).length;
+    const missing = repos.filter((repo) => DashboardInsights.getDescriptionKind(repo) === "empty").length;
     document.getElementById("kpi").innerHTML = `
-      <div class="kpi-card"><div class="k-label">总仓库数</div><div class="k-value">${repos.length}</div><div class="k-hint">当前筛选：${filtered.length}</div></div>
-      <div class="kpi-card"><div class="k-label">语言分类数</div><div class="k-value">${langSet.size}</div><div class="k-hint">技术广度</div></div>
-      <div class="kpi-card"><div class="k-label">仅英文简介</div><div class="k-value">${enOnly}</div><div class="k-hint">${enRatio}%</div></div>
-      <div class="kpi-card"><div class="k-label">暂无简介</div><div class="k-value">${empty}</div><div class="k-hint">可补充信息</div></div>
+      <div class="kpi-card"><div class="k-label">总仓库数</div><div class="k-value">${repos.length}</div><div class="k-hint">当前筛选显示 ${filtered.length} 个</div></div>
+      <div class="kpi-card"><div class="k-label">语言数</div><div class="k-value">${languageCount}</div><div class="k-hint">衡量收藏技术广度</div></div>
+      <div class="kpi-card"><div class="k-label">主题数</div><div class="k-value">${topicCount}</div><div class="k-hint">来自 GitHub topics</div></div>
+      <div class="kpi-card"><div class="k-label">缺少简介</div><div class="k-value">${missing}</div><div class="k-hint">适合后续回看整理</div></div>
     `;
   }
 
-  function renderCharts(items) {
+  function renderCharts(state, filtered) {
     ensureCharts();
-    const data = langAgg(items);
-    const top1 = data[0];
-    const top2 = data[1];
-    const insightEl = document.getElementById("pieInsight");
-    if (insightEl) {
-      insightEl.textContent = top1
-        ? `你的 Star 主要集中在 ${top1.name}${top2 ? `，其次是 ${top2.name}` : ""}。`
-        : "暂无足够数据生成洞察。";
-    }
-    pieChart.setOption({
-      tooltip: { trigger: "item" },
-      legend: { type: "scroll", top: 0, textStyle: { color: "#9aa4b2", fontSize: 11 } },
-      series: [{
-        type: "pie",
-        radius: ["46%", "70%"],
-        center: ["50%", "58%"],
-        data: data.slice(0, 8),
-        label: { color: "#9aa4b2", fontSize: 11, formatter: "{b}" },
-        itemStyle: { borderColor: "#12192b", borderWidth: 2 }
-      }]
-    });
-    const top10 = data.slice(0, 10).reverse();
-    barChart.setOption({
-      grid: { left: 90, right: 20, top: 18, bottom: 18 },
-      xAxis: { type: "value", axisLabel: { color: "#9aa4b2", fontSize: 11 }, splitLine: { lineStyle: { color: "rgba(148,163,184,0.12)" } } },
-      yAxis: { type: "category", data: top10.map((d) => d.name), axisLabel: { color: "#cfd6e4", fontSize: 12 } },
+    const languages = DashboardInsights.buildLanguageStats(filtered).slice(0, 10).reverse();
+    const topLanguage = languages[languages.length - 1];
+    const languageInsight = document.getElementById("languageInsight");
+    languageInsight.textContent = topLanguage
+      ? `当前结果中 ${topLanguage.name} 最多，共 ${topLanguage.value} 个仓库。`
+      : "暂无足够数据生成语言洞察。";
+
+    languageChart.setOption({
+      backgroundColor: "transparent",
+      tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
+      grid: { left: 108, right: 28, top: 18, bottom: 18 },
+      xAxis: {
+        type: "value",
+        axisLabel: { color: "#a3aab5", fontSize: 13 },
+        splitLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } }
+      },
+      yAxis: {
+        type: "category",
+        data: languages.map((item) => item.name),
+        axisLabel: { color: "#f3f4f6", fontSize: 13 }
+      },
       series: [{
         type: "bar",
-        data: top10.map((d) => d.value),
+        data: languages.map((item) => item.value),
+        barWidth: 16,
+        itemStyle: { color: "#3dd6c6", borderRadius: [0, 6, 6, 0] },
+        label: { show: true, position: "right", color: "#a3aab5", fontSize: 13 }
+      }]
+    });
+
+    const activity = DashboardInsights.getMonthlyActivity(filtered);
+    activityChart.setOption({
+      backgroundColor: "transparent",
+      tooltip: { trigger: "axis" },
+      grid: { left: 36, right: 16, top: 18, bottom: 42 },
+      xAxis: {
+        type: "category",
+        data: activity.map((item) => item.name),
+        axisLabel: { color: "#a3aab5", fontSize: 13, rotate: 35 }
+      },
+      yAxis: {
+        type: "value",
+        axisLabel: { color: "#a3aab5", fontSize: 13 },
+        splitLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } }
+      },
+      series: [{
+        type: "bar",
+        data: activity.map((item) => item.value),
         barWidth: 14,
-        itemStyle: { color: "#7aa2ff", borderRadius: [0, 6, 6, 0] },
-        label: { show: true, position: "right", color: "#9aa4b2", fontSize: 11 }
+        itemStyle: { color: "#8bd17c", borderRadius: [6, 6, 0, 0] }
       }]
     });
   }
 
-  function renderLanguageFilter(filtered) {
-    const langSel = document.getElementById("lang");
-    const current = langSel.value;
-    const options = ['<option value="">全部分类</option>'];
-    for (const d of langAgg(filtered)) options.push(`<option value="${d.name}">${d.name} (${d.value})</option>`);
-    langSel.innerHTML = options.join("");
-    if ([...langSel.options].some((o) => o.value === current)) langSel.value = current;
+  function renderTopicPanel(filtered) {
+    const topics = DashboardInsights.buildTopicStats(filtered).slice(0, 8);
+    const max = Math.max(1, ...topics.map((topic) => topic.value));
+    document.getElementById("topicPanel").innerHTML = topics.length ? topics.map((topic) => `
+      <div class="topic-row">
+        <span>${escapeHtml(topic.name)}</span>
+        <span>${topic.value}</span>
+        <div class="topic-bar"><span style="width:${Math.max(8, (topic.value / max) * 100)}%"></span></div>
+      </div>
+    `).join("") : '<p class="helper">当前结果没有 topic 数据。</p>';
   }
 
-  function renderStatus(state) {
+  function renderFilterChips(state) {
+    const labels = [];
+    const filters = state.filters;
+    if (filters.keyword) labels.push(["keyword", `关键词：${filters.keyword}`]);
+    if (filters.language) labels.push(["language", `语言：${filters.language}`]);
+    if (filters.topic) labels.push(["topic", `主题：${filters.topic}`]);
+    if (filters.descType) labels.push(["descType", `简介：${filters.descType}`]);
+    if (filters.status) labels.push(["status", filters.status === "active" ? "活跃仓库" : "已归档"]);
+    if (filters.starRange) labels.push(["starRange", `${filters.starRange} stars`]);
+    if (filters.updatedRange) labels.push(["updatedRange", `更新：${filters.updatedRange}`]);
+    document.getElementById("filterChips").innerHTML = labels.map(([key, label]) =>
+      `<button class="filter-chip" data-filter-key="${key}" title="移除此筛选">${escapeHtml(label)} ×</button>`
+    ).join("");
+  }
+
+  function renderStatus(state, filtered) {
     const statusEl = document.getElementById("liveStatus");
-    const rateLimitText = Object.entries(state.rateLimitByAccount).map(([k, v]) => `${k}: ${v.remaining}/${v.limit}`).join(" | ");
-    statusEl.textContent = `最近更新: ${formatTime(state.lastUpdatedAt)} ｜ 下次刷新: ${formatCountdown(state.nextRefreshAt)} ｜ ${state.isLoading ? "正在同步..." : "空闲"}${rateLimitText ? ` ｜ 限流: ${rateLimitText}` : ""}`;
+    const rateLimitText = Object.entries(state.rateLimitByAccount)
+      .map(([key, value]) => `${key}: ${value.remaining}/${value.limit}`)
+      .join(" | ");
+    statusEl.textContent = `最近更新: ${formatTime(state.lastUpdatedAt)} ｜ 下次刷新: ${formatCountdown(state.nextRefreshAt)} ｜ ${state.isLoading ? "正在刷新，旧数据保持可见" : "空闲"}${rateLimitText ? ` ｜ 限流: ${rateLimitText}` : ""}`;
     document.getElementById("diffInfo").textContent = `本次变化: +${state.diffSummary.added} / -${state.diffSummary.removed}`;
+
     let sourceLabel = "全部账号合并";
     if (state.activeSource.startsWith("account:")) {
       const accountId = state.activeSource.replace("account:", "");
       sourceLabel = state.accounts[accountId]?.label || accountId;
     }
-    const badge = document.getElementById("currentAccountBadge");
-    if (badge) badge.textContent = `当前账号：${sourceLabel}`;
-    const filterSummary = document.getElementById("filterSummary");
-    if (filterSummary) {
-      const parts = [sourceLabel];
-      if (state.filters.language) parts.push(`语言 ${state.filters.language}`);
-      if (state.filters.descType) parts.push(`简介 ${state.filters.descType}`);
-      if (state.filters.keyword) parts.push(`关键词 "${state.filters.keyword}"`);
-      filterSummary.textContent = `当前：${parts.join(" · ")}`;
-    }
+    document.getElementById("currentAccountBadge").textContent = `当前账号：${sourceLabel}`;
+    document.getElementById("filterSummary").textContent = `当前：${sourceLabel}`;
+    document.getElementById("activeFilterSummary").textContent = DashboardInsights.buildResultSummary(filtered, state.filters);
   }
 
-  function renderList(items) {
-    document.getElementById("resultCount").textContent = `${items.length} 项`;
-    const html = items.map((r) => `
-      <div class="repo-row ${expandZh ? "expanded" : ""}">
-        <div>
-          <div class="repo-title"><a href="${r.url}" target="_blank" rel="noopener noreferrer">${r.repo}</a></div>
-          <div class="repo-meta">${r.sourceAccountLabel || r.sourceAccount}</div>
-        </div>
-        <div>
-          ${r.language}
-          <div><span class="pill ${descKind(r)}">${descKind(r) === "en" ? "仅英文" : descKind(r) === "zh" ? "含中文" : "暂无简介"}</span></div>
-        </div>
-        <div><div class="desc-en">${r.description}</div>${descKind(r) === "en" ? `<div class="desc-cn">中文简介：${zhAuto(r.description)}</div>` : ""}</div>
-      </div>
-    `).join("");
-    document.getElementById("list").innerHTML = html || '<div class="error">没有匹配结果。</div>';
+  function renderList(state, filtered) {
+    document.getElementById("resultCount").textContent = `${filtered.length} 项`;
+    const emptyState = document.getElementById("emptyState");
+    const skeleton = document.getElementById("listSkeleton");
+    const list = document.getElementById("list");
+    const shouldShowSkeleton = state.isLoading && !sourceRepos(state).length;
+    skeleton.classList.toggle("visible", shouldShowSkeleton);
+    emptyState.classList.toggle("visible", !shouldShowSkeleton && !filtered.length);
+
+    if (shouldShowSkeleton || !filtered.length) {
+      list.innerHTML = "";
+      return;
+    }
+
+    list.innerHTML = filtered.map((repo) => {
+      const [owner = repo.owner || "", name = repo.name || repo.repo || ""] = (repo.fullName || repo.repo || "").split("/");
+      const topics = (repo.topics || []).slice(0, 5);
+      const descriptionKind = DashboardInsights.getDescriptionKind(repo);
+      return `
+        <article class="repo-card ${expandZh ? "expanded" : ""}">
+          <div>
+            <h3 class="repo-title"><a href="${escapeHtml(repo.url || repo.htmlUrl || "#")}" target="_blank" rel="noopener noreferrer"><span class="repo-owner">${escapeHtml(owner)}/</span>${escapeHtml(name)}</a></h3>
+            <p class="repo-desc">${escapeHtml(repo.description || "暂无简介")}</p>
+            ${descriptionKind === "en" ? `<p class="repo-desc-cn">中文补充：${escapeHtml(DashboardInsights.zhAuto(repo.description))}</p>` : ""}
+            <div class="repo-topics">
+              ${topics.map((topic) => `<span class="repo-topic">${escapeHtml(topic)}</span>`).join("")}
+              ${descriptionKind === "empty" ? '<span class="repo-topic">暂无简介</span>' : ""}
+            </div>
+          </div>
+          <aside class="repo-side">
+            <span class="repo-language"><span class="language-dot" style="background:${languageColor(repo.language)}"></span>${escapeHtml(repo.language || "Others")}</span>
+            <span class="repo-meta">★ ${Number(repo.stars || 0).toLocaleString("zh-CN")} ｜ Fork ${Number(repo.forks || 0).toLocaleString("zh-CN")}</span>
+            <span class="repo-meta">${formatDate(repo.updatedAt || repo.updated_at)}</span>
+            ${repo.archived ? '<span class="repo-topic">已归档</span>' : ""}
+          </aside>
+        </article>
+      `;
+    }).join("");
   }
 
   function render(state) {
     const filtered = getFilteredRepos(state);
-    renderLanguageFilter(filtered.length ? filtered : state.repos);
+    renderFilterOptions(state);
+    renderInsights(state, filtered);
     renderKpi(state, filtered);
-    renderCharts(filtered.length ? filtered : state.repos);
-    renderStatus(state);
-    renderList(filtered);
+    renderCharts(state, filtered);
+    renderTopicPanel(filtered);
+    renderFilterChips(state);
+    renderStatus(state, filtered);
+    renderList(state, filtered);
   }
 
   function setExpandZh(value) {
@@ -186,8 +257,8 @@ function createView() {
   }
 
   function resize() {
-    if (pieChart) pieChart.resize();
-    if (barChart) barChart.resize();
+    if (languageChart) languageChart.resize();
+    if (activityChart) activityChart.resize();
   }
 
   return { render, setExpandZh, resize };
