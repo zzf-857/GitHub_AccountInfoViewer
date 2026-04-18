@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Starred Intelligence</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --surface: #111214;
+      --surface-raised: #17181b;
+      --surface-hover: #1d1f23;
+      --line: rgba(255, 255, 255, 0.08);
+      --line-strong: rgba(255, 255, 255, 0.14);
+      --text: #f3f4f6;
+      --muted: #a3aab5;
+      --faint: #717985;
+      --accent: #3dd6c6;
+      --green: #8bd17c;
+      --amber: #f4c95d;
+      --rose: #ff7a90;
+      --font-page-title: 30px;
+      --font-section-title: 20px;
+      --font-body: 16px;
+      --font-repo-title: 17px;
+      --font-meta: 14px;
+      --font-tag: 13px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, "Segoe UI", "PingFang SC", system-ui, sans-serif;
+      font-size: var(--font-body);
+      line-height: 1.6;
+      letter-spacing: 0;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    a { color: inherit; text-decoration: none; }
+    a:hover { color: var(--accent); }
+
+    button,
+    input,
+    select {
+      font: inherit;
+      letter-spacing: 0;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 24px;
+      width: min(100%, 1760px);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 24px;
+      height: calc(100vh - 48px);
+      overflow: auto;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .brand-title {
+      margin: 0 0 8px;
+      font-size: 24px;
+      line-height: 32px;
+      font-weight: 600;
+    }
+
+    .sidebar-copy,
+    .helper,
+    .repo-meta,
+    .chart-note,
+    .status {
+      color: var(--muted);
+      font-size: var(--font-meta);
+      line-height: 22px;
+    }
+
+    .field { margin-top: 18px; }
+
+    .label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: var(--font-meta);
+      line-height: 22px;
+      font-weight: 500;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      min-height: 44px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--text);
+      background: var(--surface-raised);
+      font-size: 15px;
+      line-height: 22px;
+    }
+
+    input:focus,
+    select:focus,
+    button:focus-visible {
+      outline: 2px solid rgba(61, 214, 198, 0.32);
+      outline-offset: 2px;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    button:hover,
+    .saved-view:hover {
+      background: var(--surface-hover);
+      border-color: var(--line-strong);
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .saved-views {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .saved-view {
+      min-height: 38px;
+      text-align: left;
+      color: var(--muted);
+      background: transparent;
+    }
+
+    .main {
+      display: grid;
+      gap: 20px;
+      min-width: 0;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: var(--font-page-title);
+      line-height: 38px;
+      font-weight: 600;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 320px;
+    }
+
+    .account-badge {
+      white-space: nowrap;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: var(--surface);
+      font-size: var(--font-meta);
+      line-height: 22px;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 0.35fr);
+      gap: 12px;
+    }
+
+    .status {
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .insight-summary,
+    .kpi,
+    .charts {
+      display: grid;
+      gap: 12px;
+    }
+
+    .insight-summary {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .insight-card,
+    .kpi-card,
+    .panel,
+    .repo-card,
+    .empty-state,
+    .skeleton-panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .insight-card,
+    .kpi-card,
+    .panel {
+      padding: 18px;
+    }
+
+    .insight-card h3,
+    .panel h2,
+    .list-title,
+    .k-label {
+      margin: 0;
+      font-size: var(--font-section-title);
+      line-height: 30px;
+      font-weight: 600;
+    }
+
+    .insight-card p,
+    .k-hint {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: var(--font-body);
+      line-height: 26px;
+    }
+
+    .kpi {
+      grid-template-columns: repeat(4, minmax(140px, 1fr));
+    }
+
+    .k-value {
+      margin-top: 8px;
+      font-size: 34px;
+      line-height: 40px;
+      font-weight: 600;
+    }
+
+    .charts {
+      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.8fr) minmax(0, 1fr);
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .tag,
+    .filter-chip,
+    .topic-chip,
+    .repo-topic,
+    .repo-language {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 26px;
+      padding: 3px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: var(--font-tag);
+      line-height: 18px;
+      font-weight: 500;
+    }
+
+    .chart-box {
+      height: 260px;
+    }
+
+    .topic-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .topic-row {
+      display: grid;
+      grid-template-columns: minmax(80px, 1fr) minmax(40px, auto);
+      gap: 12px;
+      align-items: center;
+      color: var(--muted);
+      font-size: var(--font-meta);
+    }
+
+    .topic-bar {
+      grid-column: 1 / -1;
+      height: 6px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .topic-bar span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--accent);
+    }
+
+    .list-panel {
+      padding: 18px;
+    }
+
+    .list-toolbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 14px;
+    }
+
+    .filter-chip {
+      width: auto;
+      min-height: 30px;
+      background: var(--surface-raised);
+    }
+
+    #listWrap {
+      display: grid;
+      gap: 10px;
+      max-height: none;
+    }
+
+    .repo-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(160px, auto);
+      gap: 18px;
+      min-height: 104px;
+      padding: 18px 20px;
+      transition: background 160ms ease, border-color 160ms ease;
+    }
+
+    .repo-card:hover {
+      border-color: var(--line-strong);
+      background: var(--surface-hover);
+    }
+
+    .repo-title {
+      margin: 0 0 8px;
+      font-size: var(--font-repo-title);
+      line-height: 26px;
+      font-weight: 600;
+    }
+
+    .repo-owner {
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .repo-desc {
+      display: -webkit-box;
+      margin: 0;
+      overflow: hidden;
+      color: var(--text);
+      font-size: var(--font-body);
+      line-height: 26px;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .repo-desc-cn {
+      display: none;
+      margin-top: 10px;
+      color: #c6f3ed;
+      font-size: var(--font-body);
+      line-height: 26px;
+    }
+
+    .repo-card.expanded .repo-desc-cn {
+      display: block;
+    }
+
+    .repo-side {
+      display: grid;
+      align-content: start;
+      justify-items: end;
+      gap: 8px;
+      min-width: 160px;
+    }
+
+    .repo-topics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .language-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .empty-state,
+    .skeleton-panel {
+      display: none;
+      padding: 28px;
+      color: var(--muted);
+    }
+
+    .empty-state.visible,
+    .skeleton-panel.visible {
+      display: block;
+    }
+
+    .skeleton-line {
+      height: 14px;
+      margin: 12px 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+    }
+
+    .error {
+      min-height: 22px;
+      color: var(--rose);
+      font-size: var(--font-meta);
+      line-height: 22px;
+    }
+
+    @media (max-width: 1200px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; }
+      .topbar,
+      .list-toolbar { flex-direction: column; }
+      .topbar-actions { width: 100%; min-width: 0; }
+      .insight-summary,
+      .kpi,
+      .charts { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      .layout { padding: 14px; }
+      .main { order: 1; }
+      .sidebar { order: 2; }
+      .insight-summary,
+      .kpi,
+      .charts,
+      .status-grid,
+      .repo-card { grid-template-columns: 1fr; }
+      .repo-side { justify-items: start; }
+      .button-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1 class="brand-title">Starred Intelligence</h1>
+      <p class="sidebar-copy">洞察优先的 GitHub Star 收藏分析。大字号、低噪音、列表优先。</p>
+
+      <div class="button-row">
+        <button id="manualRefresh">立即刷新</button>
+        <button id="clearCredentials">清除缓存</button>
+      </div>
+
+      <div class="field">
+        <label class="label" for="source">数据源</label>
+        <select id="source"><option value="merged">全部账号合并</option></select>
+      </div>
+
+      <div class="field">
+        <label class="label" for="globalSearch">全局搜索</label>
+        <input id="globalSearch" placeholder="按仓库、owner、描述、主题搜索" />
+      </div>
+
+      <div class="field">
+        <label class="label" for="lang">语言</label>
+        <select id="lang"><option value="">全部语言</option></select>
+      </div>
+
+      <div class="field">
+        <label class="label" for="topicFilter">主题</label>
+        <select id="topicFilter"><option value="">全部主题</option></select>
+      </div>
+
+      <div class="field">
+        <label class="label" for="updatedFilter">更新时间</label>
+        <select id="updatedFilter">
+          <option value="">不限时间</option>
+          <option value="month">最近一月</option>
+          <option value="quarter">最近三月</option>
+          <option value="year">最近一年</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="label" for="starsFilter">Star 数</label>
+        <select id="starsFilter">
+          <option value="">不限 stars</option>
+          <option value="0-100">0-100</option>
+          <option value="100-1000">100-1000</option>
+          <option value="1000+">1000+</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="label" for="statusFilter">仓库状态</label>
+        <select id="statusFilter">
+          <option value="">全部状态</option>
+          <option value="active">活跃仓库</option>
+          <option value="archived">已归档</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="label" for="descType">简介类型</label>
+        <select id="descType">
+          <option value="">全部简介</option>
+          <option value="en">仅英文</option>
+          <option value="zh">含中文</option>
+          <option value="empty">暂无简介</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="label">保存视图</label>
+        <div class="saved-views" id="savedViews">
+          <button class="saved-view" data-view="All">All</button>
+          <button class="saved-view" data-view="AI/LLM">AI/LLM</button>
+          <button class="saved-view" data-view="Frontend">Frontend</button>
+          <button class="saved-view" data-view="DevTools">DevTools</button>
+          <button class="saved-view" data-view="Data">Data</button>
+          <button class="saved-view" data-view="Recently Starred">Recently Starred</button>
+        </div>
+      </div>
+
+      <div class="button-row">
+        <button id="expandAll">展开中文补充</button>
+        <button id="collapseAll">收起中文补充</button>
+      </div>
+      <p class="helper" id="sourceInfo">实时模式已启用</p>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2 class="page-title">GitHub Star 仓库洞察</h2>
+          <p class="helper" id="filterSummary">当前：全部账号合并</p>
+        </div>
+        <div class="topbar-actions">
+          <div class="account-badge" id="currentAccountBadge">当前账号：全部账号合并</div>
+        </div>
+      </header>
+
+      <section class="status-grid">
+        <div class="status" id="liveStatus">最近更新: -- ｜ 下次刷新: --:-- ｜ 空闲</div>
+        <div class="status" id="diffInfo">本次变化: +0 / -0</div>
+      </section>
+
+      <section class="insight-summary" id="insightSummary" aria-label="收藏洞察"></section>
+
+      <section class="kpi" id="kpi" aria-label="关键指标"></section>
+
+      <section class="charts" aria-label="兴趣结构">
+        <div class="panel">
+          <div class="panel-head"><h2>语言结构</h2><span class="tag">Top 10</span></div>
+          <div class="chart-box" id="languageChart"></div>
+          <p class="chart-note" id="languageInsight">正在生成洞察...</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>热门主题</h2><span class="tag">Topics</span></div>
+          <div class="topic-list" id="topicPanel"></div>
+          <p class="chart-note">主题来自 GitHub topics，缺失时可用关键词和语言筛选。</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>最近活跃</h2><span class="tag">12 months</span></div>
+          <div class="chart-box" id="activityChart"></div>
+          <p class="chart-note">按 starred_at 或 updated_at 聚合，帮助观察收藏节奏。</p>
+        </div>
+      </section>
+
+      <section class="panel list-panel">
+        <div class="error" id="errorInfo"></div>
+        <div class="list-toolbar">
+          <div>
+            <h2 class="list-title">仓库清单</h2>
+            <p class="helper" id="activeFilterSummary">你正在查看完整收藏。</p>
+          </div>
+          <div class="account-badge" id="resultCount">0 项</div>
+        </div>
+        <div class="filter-chips" id="filterChips"></div>
+        <div class="skeleton-panel" id="listSkeleton">
+          <div class="skeleton-line" style="width: 38%"></div>
+          <div class="skeleton-line" style="width: 72%"></div>
+          <div class="skeleton-line" style="width: 56%"></div>
+        </div>
+        <div class="empty-state" id="emptyState">
+          <h2 class="list-title">没有仓库匹配当前筛选条件</h2>
+          <p class="helper">尝试清空搜索、放宽语言筛选范围，或重置全部筛选。</p>
+          <button id="resetFilters">重置筛选</button>
+        </div>
+        <div id="listWrap"><div id="list"></div></div>
+      </section>
+    </main>
+  </div>
+  <script src="./js/github-api.js"></script>
+  <script src="./js/security.js"></script>
+  <script src="./js/store.js"></script>
+  <script src="./js/refresh-controller.js"></script>
+  <script src="./js/insights.js"></script>
+  <script src="./js/view.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
