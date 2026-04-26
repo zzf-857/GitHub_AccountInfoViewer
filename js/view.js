@@ -34,6 +34,37 @@ function sourceRepos(state) {
   return state.repos || [];
 }
 
+function parseRepoTimestamp(repo) {
+  const t = Date.parse(repo.updatedAt || repo.updated_at || "");
+  return Number.isFinite(t) ? t : 0;
+}
+
+function toNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function compareText(a, b) {
+  return String(a || "").localeCompare(String(b || ""), "zh-CN", { sensitivity: "base" });
+}
+
+function sortRepositories(repos, sorting) {
+  const by = sorting?.by || "updatedAt";
+  const order = sorting?.order === "asc" ? 1 : -1;
+  const sorted = [...repos];
+  sorted.sort((left, right) => {
+    if (by === "stars") return (toNumber(left.stars) - toNumber(right.stars)) * order;
+    if (by === "forks") return (toNumber(left.forks) - toNumber(right.forks)) * order;
+    if (by === "name") {
+      const leftName = left.fullName || left.repo || left.name || "";
+      const rightName = right.fullName || right.repo || right.name || "";
+      return compareText(leftName, rightName) * order;
+    }
+    return (parseRepoTimestamp(left) - parseRepoTimestamp(right)) * order;
+  });
+  return sorted;
+}
+
 function languageColor(language) {
   const colors = {
     JavaScript: "#f4c95d",
@@ -59,7 +90,8 @@ function createView() {
   }
 
   function getFilteredRepos(state) {
-    return DashboardInsights.filterRepositories(sourceRepos(state), state.filters);
+    const filtered = DashboardInsights.filterRepositories(sourceRepos(state), state.filters);
+    return sortRepositories(filtered, state.sorting);
   }
 
   function renderSelectOptions(selectId, rows, placeholder, currentValue) {
@@ -76,26 +108,40 @@ function createView() {
     renderSelectOptions("topicFilter", DashboardInsights.buildTopicStats(repos).slice(0, 40), "全部主题", state.filters.topic);
   }
 
-  function renderInsights(state, filtered) {
-    const cards = DashboardInsights.buildInsightCards(sourceRepos(state), filtered);
-    document.getElementById("insightSummary").innerHTML = cards.map((card) => `
-      <article class="insight-card">
-        <h3>${escapeHtml(card.title)}</h3>
-        <p>${escapeHtml(card.body)}</p>
-      </article>
-    `).join("");
-  }
-
-  function renderKpi(state, filtered) {
+  function renderMetricsBanner(state, filtered) {
     const repos = sourceRepos(state);
-    const languageCount = DashboardInsights.buildLanguageStats(repos).length;
-    const topicCount = DashboardInsights.buildTopicStats(repos).length;
+    const languageStats = DashboardInsights.buildLanguageStats(repos);
+    const topicStats = DashboardInsights.buildTopicStats(repos);
     const missing = repos.filter((repo) => DashboardInsights.getDescriptionKind(repo) === "empty").length;
-    document.getElementById("kpi").innerHTML = `
-      <div class="kpi-card"><div class="k-label">总仓库数</div><div class="k-value">${repos.length}</div><div class="k-hint">当前筛选显示 ${filtered.length} 个</div></div>
-      <div class="kpi-card"><div class="k-label">语言数</div><div class="k-value">${languageCount}</div><div class="k-hint">衡量收藏技术广度</div></div>
-      <div class="kpi-card"><div class="k-label">主题数</div><div class="k-value">${topicCount}</div><div class="k-hint">来自 GitHub topics</div></div>
-      <div class="kpi-card"><div class="k-label">缺少简介</div><div class="k-value">${missing}</div><div class="k-hint">适合后续回看整理</div></div>
+    
+    const topLanguage = languageStats.length ? languageStats[0].name : "N/A";
+    const topTopic = topicStats.length ? topicStats[0].name : "N/A";
+    
+    document.getElementById("metricsBanner").innerHTML = `
+      <div class="metric-item">
+        <span class="metric-label">总仓库数</span>
+        <span class="metric-value highlight">${repos.length}</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">当前筛选</span>
+        <span class="metric-value">${filtered.length}</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">语言数</span>
+        <span class="metric-value">${languageStats.length}</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">最热语言</span>
+        <span class="metric-value highlight">${escapeHtml(topLanguage)}</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">最热主题</span>
+        <span class="metric-value">${escapeHtml(topTopic)}</span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">缺少简介</span>
+        <span class="metric-value" style="color: #ff0066">${missing}</span>
+      </div>
     `;
   }
 
@@ -126,7 +172,7 @@ function createView() {
         type: "bar",
         data: languages.map((item) => item.value),
         barWidth: 16,
-        itemStyle: { color: "#3dd6c6", borderRadius: [0, 6, 6, 0] },
+        itemStyle: { color: "#00f0ff", borderRadius: [0, 6, 6, 0] },
         label: { show: true, position: "right", color: "#a3aab5", fontSize: 13 }
       }]
     });
@@ -184,11 +230,17 @@ function createView() {
 
   function renderStatus(state, filtered) {
     const statusEl = document.getElementById("liveStatus");
+    const autoRefreshText = state.autoRefreshEnabled ? "开" : "关";
+    const nextRefreshText = state.autoRefreshEnabled ? formatCountdown(state.nextRefreshAt) : "已关闭";
     const rateLimitText = Object.entries(state.rateLimitByAccount)
       .map(([key, value]) => `${key}: ${value.remaining}/${value.limit}`)
       .join(" | ");
-    statusEl.textContent = `最近更新: ${formatTime(state.lastUpdatedAt)} ｜ 下次刷新: ${formatCountdown(state.nextRefreshAt)} ｜ ${state.isLoading ? "正在刷新，旧数据保持可见" : "空闲"}${rateLimitText ? ` ｜ 限流: ${rateLimitText}` : ""}`;
+    statusEl.textContent = `最近更新: ${formatTime(state.lastUpdatedAt)} ｜ 自动刷新: ${autoRefreshText} ｜ 下次刷新: ${nextRefreshText} ｜ ${state.isLoading ? "正在刷新，旧数据保持可见" : "空闲"}${rateLimitText ? ` ｜ 限流: ${rateLimitText}` : ""}`;
     document.getElementById("diffInfo").textContent = `本次变化: +${state.diffSummary.added} / -${state.diffSummary.removed}`;
+    const autoRefreshToggle = document.getElementById("autoRefreshToggle");
+    if (autoRefreshToggle) autoRefreshToggle.checked = !!state.autoRefreshEnabled;
+    const sourceInfo = document.getElementById("sourceInfo");
+    if (sourceInfo) sourceInfo.textContent = state.autoRefreshEnabled ? "自动刷新已启用" : "自动刷新已关闭";
 
     let sourceLabel = "全部账号合并";
     if (state.activeSource.startsWith("account:")) {
@@ -198,6 +250,10 @@ function createView() {
     document.getElementById("currentAccountBadge").textContent = `当前账号：${sourceLabel}`;
     document.getElementById("filterSummary").textContent = `当前：${sourceLabel}`;
     document.getElementById("activeFilterSummary").textContent = DashboardInsights.buildResultSummary(filtered, state.filters);
+    const sortByEl = document.getElementById("sortBy");
+    const sortOrderEl = document.getElementById("sortOrder");
+    if (sortByEl) sortByEl.value = state.sorting?.by || "updatedAt";
+    if (sortOrderEl) sortOrderEl.value = state.sorting?.order || "desc";
   }
 
   function renderList(state, filtered) {
@@ -223,11 +279,12 @@ function createView() {
           <div>
             <h3 class="repo-title"><a href="${escapeHtml(repo.url || repo.htmlUrl || "#")}" target="_blank" rel="noopener noreferrer"><span class="repo-owner">${escapeHtml(owner)}/</span>${escapeHtml(name)}</a></h3>
             <p class="repo-desc">${escapeHtml(repo.description || "暂无简介")}</p>
-            ${descriptionKind === "en" ? `<p class="repo-desc-cn">中文补充：${escapeHtml(DashboardInsights.zhAuto(repo.description))}</p>` : ""}
+            ${descriptionKind === "en" ? `<div class="repo-desc-cn"><strong>自动解读：</strong>${escapeHtml(DashboardInsights.zhAuto(repo.description))}</div>` : ""}
             <div class="repo-topics">
               ${topics.map((topic) => `<span class="repo-topic">${escapeHtml(topic)}</span>`).join("")}
               ${descriptionKind === "empty" ? '<span class="repo-topic">暂无简介</span>' : ""}
             </div>
+            <button class="ai-guide-btn" data-repo="${escapeHtml(owner)}/${escapeHtml(name)}" data-desc="${escapeHtml(repo.description || '')}" data-panel-id="ai-panel-${escapeHtml(owner)}-${escapeHtml(name)}">✨ AI 引导</button>
           </div>
           <aside class="repo-side">
             <span class="repo-language"><span class="language-dot" style="background:${languageColor(repo.language)}"></span>${escapeHtml(repo.language || "Others")}</span>
@@ -243,8 +300,7 @@ function createView() {
   function render(state) {
     const filtered = getFilteredRepos(state);
     renderFilterOptions(state);
-    renderInsights(state, filtered);
-    renderKpi(state, filtered);
+    renderMetricsBanner(state, filtered);
     renderCharts(state, filtered);
     renderTopicPanel(filtered);
     renderFilterChips(state);

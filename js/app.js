@@ -205,7 +205,19 @@ async function bootstrap() {
     document.getElementById("statusFilter").addEventListener("change", (e) => store.setFilters({ status: e.target.value }));
     document.getElementById("starsFilter").addEventListener("change", (e) => store.setFilters({ starRange: e.target.value }));
     document.getElementById("updatedFilter").addEventListener("change", (e) => store.setFilters({ updatedRange: e.target.value }));
+    document.getElementById("sortBy").addEventListener("change", (e) => {
+      store.patch({ sorting: { ...store.getState().sorting, by: e.target.value } });
+    });
+    document.getElementById("sortOrder").addEventListener("change", (e) => {
+      store.patch({ sorting: { ...store.getState().sorting, order: e.target.value } });
+    });
     document.getElementById("source").addEventListener("change", (e) => store.patch({ activeSource: e.target.value }));
+    document.getElementById("autoRefreshToggle").addEventListener("change", (e) => {
+      const enabled = !!e.target.checked;
+      store.patch({ autoRefreshEnabled: enabled });
+      if (enabled) refresher.start();
+      else refresher.stop();
+    });
     document.getElementById("manualRefresh").addEventListener("click", () => refresher.trigger("manual"));
     document.getElementById("clearCredentials").addEventListener("click", () => {
       SecurityStore.clearAllLocalData();
@@ -240,6 +252,180 @@ async function bootstrap() {
       store.setFilters({ keyword: "", language: "", descType: "", topic: "", status: "", starRange: "", updatedRange: "" });
       syncFilterControls(store.getState().filters);
     });
+    
+    let currentAIAborter = null;
+    let aiOnline = false;
+
+    // AI 模型连通性探测
+    (async function checkAIHealth() {
+      const dot = document.getElementById("aiHealthDot");
+      const label = document.getElementById("aiHealthLabel");
+      try {
+        const healthCtrl = new AbortController();
+        const healthTimeout = setTimeout(() => healthCtrl.abort(), 35000);
+        const resp = await fetch("/api/ai-health", { signal: healthCtrl.signal });
+        clearTimeout(healthTimeout);
+        const data = await resp.json();
+        if (data.ok) {
+          aiOnline = true;
+          dot.className = "ai-health-dot online";
+          label.textContent = `${data.model} 在线`;
+          label.style.color = "#22c55e";
+        } else {
+          aiOnline = false;
+          dot.className = "ai-health-dot offline";
+          label.textContent = `离线: ${data.message}`;
+          label.style.color = "#ef4444";
+          document.querySelectorAll(".ai-guide-btn").forEach(b => b.classList.add("ai-offline"));
+        }
+      } catch (err) {
+        aiOnline = false;
+        dot.className = "ai-health-dot offline";
+        label.textContent = "连接失败";
+        label.style.color = "#ef4444";
+        document.querySelectorAll(".ai-guide-btn").forEach(b => b.classList.add("ai-offline"));
+      }
+    })();
+
+    document.getElementById("list").addEventListener("click", async (e) => {
+      const btn = e.target.closest(".ai-guide-btn");
+      if (!btn) return;
+      if (!aiOnline) return; // 离线时不响应
+      
+      const repo = btn.dataset.repo;
+      const desc = btn.dataset.desc || "";
+      const [owner, repoName] = repo.split("/");
+      
+      const modalOverlay = document.getElementById("aiModalOverlay");
+      const modalTitle = document.getElementById("aiModalTitle");
+      const panel = document.getElementById("aiModalContent");
+      
+      // Abort any ongoing request
+      if (currentAIAborter) {
+        currentAIAborter.abort();
+        currentAIAborter = null;
+      }
+      currentAIAborter = new AbortController();
+      
+      modalTitle.innerHTML = `✨ AI 引导：${escapeHtml(owner)}/${escapeHtml(repoName)}`;
+      panel.innerHTML = `
+        <div class="ai-loading-container" id="aiLoadingContainer">
+          <div class="ai-loading-step">正在获取 GitHub README...</div>
+          <div class="ai-loading-step thinking">AI 正在深度思考中...</div>
+        </div>
+      `;
+      modalOverlay.classList.add("visible");
+      
+      btn.disabled = true;
+      btn.textContent = "✨ 正在解读...";
+      
+      const badge = document.getElementById("aiModelBadge");
+      badge.style.display = "none";
+      badge.textContent = "";
+
+      try {
+        const url = `/api/ai-guide?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repoName)}&description=${encodeURIComponent(desc)}`;
+        const response = await fetch(url, { signal: currentAIAborter.signal });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const usedModel = response.headers.get("X-AI-Model");
+        if (usedModel) {
+          badge.textContent = `Model: ${usedModel}`;
+          badge.style.display = "inline-block";
+        }
+        
+        let fullText = "";
+        let displayLength = 0;
+        let isDone = false;
+        
+        let renderFrame;
+        const renderLoop = () => {
+          if (displayLength < fullText.length) {
+            const diff = fullText.length - displayLength;
+            const step = Math.max(1, Math.ceil(diff / 4));
+            displayLength += step;
+            
+            const currentText = fullText.slice(0, displayLength);
+            if (window.marked) {
+              panel.innerHTML = marked.parse(currentText) + '<span class="ai-cursor"></span>';
+            } else {
+              panel.innerHTML = currentText.replace(/\n/g, '<br>') + '<span class="ai-cursor"></span>';
+            }
+            panel.scrollTop = panel.scrollHeight;
+          } else if (isDone) {
+            const currentText = fullText;
+            if (currentText.length > 0) {
+              if (window.marked) {
+                panel.innerHTML = marked.parse(currentText);
+              } else {
+                panel.innerHTML = currentText.replace(/\n/g, '<br>');
+              }
+            }
+            return;
+          }
+          renderFrame = requestAnimationFrame(renderLoop);
+        };
+        renderFrame = requestAnimationFrame(renderLoop);
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        
+        let sseBuffer = "";
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          
+          sseBuffer += decoder.decode(value, { stream: true });
+          const lines = sseBuffer.split("\n");
+          // 保留最后一行（可能不完整）
+          sseBuffer = lines.pop() || "";
+          
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              const dataStr = trimmed.slice(6);
+              if (dataStr === '[DONE]') continue;
+              try {
+                const data = JSON.parse(dataStr);
+                if (data.content) {
+                  fullText += data.content;
+                }
+              } catch (err) {}
+            }
+          }
+        }
+        
+      } catch (err) {
+        if (renderFrame) cancelAnimationFrame(renderFrame);
+        if (err.name === 'AbortError') {
+          panel.innerHTML = `<span style="color: #a3aab5">解读已取消</span>`;
+        } else {
+          panel.innerHTML = `<span style="color: var(--rose)">解读失败：${err.message}</span>`;
+        }
+      } finally {
+        isDone = true;
+        btn.disabled = false;
+        btn.textContent = "✨ AI 引导";
+      }
+    });
+
+    const closeAIModal = () => {
+      document.getElementById("aiModalOverlay").classList.remove("visible");
+      if (currentAIAborter) {
+        currentAIAborter.abort();
+        currentAIAborter = null;
+      }
+    };
+
+    document.getElementById("aiModalClose")?.addEventListener("click", closeAIModal);
+    
+    document.getElementById("aiModalOverlay")?.addEventListener("click", (e) => {
+      if (e.target === document.getElementById("aiModalOverlay")) {
+        closeAIModal();
+      }
+    });
+
     window.addEventListener("keydown", (e) => {
       if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
       const activeTag = document.activeElement?.tagName;

@@ -1,6 +1,7 @@
 const defaultState = {
   activeSource: "merged",
   filters: { keyword: "", language: "", descType: "", topic: "", status: "", starRange: "", updatedRange: "" },
+  sorting: { by: "updatedAt", order: "desc" },
   accounts: {},
   accountOrder: [],
   repos: [],
@@ -10,6 +11,7 @@ const defaultState = {
   isLoading: false,
   error: "",
   refreshIntervalMs: 5 * 60 * 1000,
+  autoRefreshEnabled: true,
   rateLimitByAccount: {},
   diffSummary: { added: 0, removed: 0 }
 };

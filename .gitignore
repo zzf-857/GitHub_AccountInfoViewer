@@ -2,6 +2,7 @@
 .env.*
 !.env.example
 .claude/
+.superpowers/
 .vscode/
 __pycache__/
 *.py[cod]
@@ -11,5 +12,8 @@ dist/
 build/
 output/
 server.*.log
+.runtime/
 .DS_Store
 Thumbs.db
+AntigravityPlan/
+.cursor/
