@@ -1,118 +1,121 @@
-# GitHub_AccountInfoViewer
+# GitHub Star 仓库洞察 (GitHub Star Warehouse Insights)
 
-一个本地运行的 GitHub Star 仓库洞察面板，用来整理多个 GitHub 账号的收藏仓库，并通过筛选、图表、排序和 AI 引导辅助快速回看自己的技术收藏。
+一个本地运行的 GitHub Star 仓库洞察与整理工具。它可以合并、整理多个 GitHub 账号的收藏仓库，提供丰富的图表与多维度的筛选条件，并结合 AI 技术帮助你快速回顾、分析自己的技术收藏。
 
-## 当前完成情况
+---
 
-当前版本已经从最初的简单 Star 列表升级为一个本地数据看板：
+## 📸 界面预览
 
-- 支持从 `.env` 读取多个 GitHub 账号配置，并合并展示 Star 仓库。
-- 支持按账号单独查看，也支持全部账号合并查看。
-- 支持关键词、语言、主题、更新时间、Star 数、仓库状态、简介类型筛选。
-- 支持按更新时间、Star 数、Fork 数、仓库名称排序。
-- 支持自动刷新、手动刷新、缓存回退和 API rate limit 状态展示。
-- 支持仓库卡片列表、语言结构图、热门主题面板、最近活跃图表和关键指标区域。
-- 支持顶部 GitHub 入口卡片：Explore、Topics、Trending、Collections。
-- 支持 AI 引导功能，通过本地 `server.py` 代理读取 README 并调用兼容 OpenAI Chat Completions 或火山引擎 Responses 格式的模型接口。
-- 支持 AI 连通性检测、流式输出、取消请求和离线状态提示。
-- 已补充 Python 契约测试、安全扫描测试和 JavaScript 洞察逻辑测试。
+### 项目数据看板
+![项目数据看板](docs/images/dashboard.png)
 
-## 运行环境
+### AI 智能引导与分析
+![AI 智能引导](docs/images/ai_guide.png)
 
-- Python 3
-- 现代浏览器
-- 可选：Node.js，用于运行 JavaScript 测试
+---
 
-前端页面仍是静态 HTML/CSS/JS，`server.py` 只负责本地静态服务和 AI API 代理。
+## ✨ 核心特性
 
-## 配置方式
+- **多账号数据合并**：支持从 `.env` 配置文件读取多个 GitHub 账号的 Token，合并展示所有 Star 仓库，支持多账号合并或单账号切片分析。
+- **多维度筛选与检索**：
+  - **搜索**：支持对仓库名、所有者（Owner）、描述、主题进行全局搜索。
+  - **快捷分类**：内置 `AI / LLM`、`Frontend`、`DevTools`、`Data` 以及 `Recently Starred` 等常用快捷分类标签。
+  - **进阶过滤**：支持根据编程语言、热门主题（Topics）、更新时间范围、Star 数量区间、是否包含简介/README 等条件进行精细化过滤。
+- **直观的数据可视化**：
+  - **关键指标看板**：展示总仓库数、筛选匹配数、语言数、主要活跃语言、极少简介数等。
+  - **语言结构图表**：清晰直观的 Top 10 语言比例横向柱状图。
+  - **热门主题词云/列表**：提炼最常关注的 GitHub topics 标签。
+  - **活跃趋势折线图**：展示近 12 个月的 Star/更新时间活跃趋势。
+- **AI 智能代理与引导**：
+  - 本地 `server.py` 充当静态文件服务器与 AI API 代理。
+  - 一键对选定仓库进行 AI 分析，自动提取并精简 README，解析生成“项目简介”、“核心功能与优势”、“具体使用场景”和“用法示例”等信息。
+  - 完美支持 OpenAI 兼容接口（如 GPT、Claude、火山引擎方舟等大模型），支持流式传输（Streaming）和实时取消请求。
+- **安全与性能**：
+  - 本地缓存机制，支持快速加载与手动/自动刷新，避免频繁触发 GitHub API 速率限制（Rate Limit）。
+  - Token 及 API 密钥仅在本地 `.env` 及本地服务中流转，安全可靠。
 
-在项目根目录创建 `.env` 文件：
+## 🛠️ 项目架构与文件说明
+
+```text
+GitHub_AccountInfoViewer/
+├── starred_repos_dashboard.html  # 数据看板前端主页面与样式 (CSS/HTML)
+├── server.py                     # 本地 Python 轻量服务，兼做静态服务器及 AI 代理
+├── js/
+│   ├── app.js                    # 看板入口、账号载入、自动刷新与事件监听
+│   ├── github-api.js             # 负责 GitHub Star 数据的拉取、合并与归一化
+│   ├── insights.js               # 核心纯逻辑层：数据过滤、指标统计、图表数据处理等
+│   ├── store.js                  # 前端状态管理器 (State Management)
+│   ├── view.js                   # 页面元素渲染与交互逻辑
+│   └── refresh-controller.js     # 自动刷新控制器
+├── docs/
+│   └── images/                   # 存放 README 预览图片的目录
+│       ├── dashboard.png         # 看板预览图
+│       └── ai_guide.png          # AI 引导对话框预览图
+└── tests/                        # 自动化测试目录（包含 Python 契约测试与 JS 逻辑测试）
+```
+
+## 🚀 快速开始
+
+### 1. 环境准备
+
+- 安装 Python 3.x
+- 使用现代主流浏览器访问
+- （可选）若要运行 JavaScript 测试，需安装 Node.js
+
+### 2. 配置环境
+
+在项目根目录下创建一个 `.env` 文件（已在 `.gitignore` 中忽略，确保凭证安全），内容模板如下：
 
 ```env
+# GitHub 账号配置 (支持多账号)
 ACCOUNT_1_NAME=主账号
-ACCOUNT_1_TOKEN=你的 GitHub Token
+ACCOUNT_1_TOKEN=your_github_personal_access_token_1
 ACCOUNT_2_NAME=备用账号
-ACCOUNT_2_TOKEN=你的第二个 GitHub Token
+ACCOUNT_2_TOKEN=your_github_personal_access_token_2
 
-AI_API_KEY=你的 AI API Key
+# AI 模型代理配置 (可选，不配置则进入 AI 模拟模式)
+AI_API_KEY=your_llm_api_key
 AI_API_BASE=https://api.openai.com/v1
-AI_MODEL=gpt-3.5-turbo
+AI_MODEL=gpt-4o-mini
 ```
 
-说明：
+> [!TIP]
+> - GitHub Personal Access Token 仅需最基础的公共数据读取权限即可。
+> - `AI_API_BASE` 支持任何兼容 OpenAI 接口标准的 API 服务商（如 DeepSeek、月之暗面、火山引擎等）。
 
-- `ACCOUNT_<N>_TOKEN` 用于读取对应账号的 Star 仓库。
-- 如果只查看公开数据，GitHub Token 权限可以保持最小化；如果后续读取 private 仓库或更多账号数据，需要给 token 增加对应权限。
-- `AI_API_KEY` 不配置时，AI 引导会进入模拟返回模式。
-- `.env` 已被 `.gitignore` 忽略，不应提交真实密钥。
+### 3. 运行服务
 
-## 启动方式
+双击运行启动脚本或在终端中执行：
 
-推荐使用批处理脚本启动本地服务：
+* **Windows 批处理启动（推荐）**：
+  ```powershell
+  .\start_server.bat
+  ```
+* **手动命令启动**：
+  ```powershell
+  python server.py 8000
+  ```
 
-```powershell
-.\start_server.bat
-```
-
-启动后访问：
-
+启动后，在浏览器中打开以下地址即可使用：
 ```text
 http://127.0.0.1:8000/starred_repos_dashboard.html
 ```
 
-停止服务：
+要停止服务，可运行 `.\stop_server.bat` 或在终端中按 `Ctrl+C` 中断。
 
-```powershell
-.\stop_server.bat
-```
+### 4. 运行测试
 
-也可以直接运行：
+* **运行 Python 后端/契约测试**：
+  ```powershell
+  python -m unittest discover -s tests
+  ```
+* **运行 JS 纯逻辑层测试**：
+  ```powershell
+  node tests/js/insights.test.js
+  ```
 
-```powershell
-python server.py 8000
-```
+## ⚠️ 注意事项
 
-## 测试
-
-运行 Python 测试：
-
-```powershell
-python -m unittest discover -s tests
-```
-
-运行 JavaScript 洞察逻辑测试：
-
-```powershell
-node tests/js/insights.test.js
-```
-
-## 主要文件
-
-```text
-starred_repos_dashboard.html  主页面和样式
-server.py                     本地静态服务与 AI API 代理
-js/app.js                     页面启动、账号读取、刷新和事件绑定
-js/github-api.js              GitHub Star API 请求与数据归一化
-js/insights.js                筛选、统计、摘要等纯逻辑
-js/store.js                   前端状态管理
-js/view.js                    页面渲染
-js/refresh-controller.js      自动刷新控制
-tests/                        自动化测试
-```
-
-## 注意事项
-
-- 当前程序面向本地使用，不建议把带真实 `.env` 的目录直接部署到公网。
-- 浏览器端会读取 `.env` 中的账号 token，因此目前更适合作为个人本地工具。
-- AI 引导会把仓库名、简介和 README 片段发送给配置的模型接口，敏感私有仓库需要谨慎使用。
-- 仓库权限盘点功能暂不加入当前版本，避免偏离 Star 收藏洞察的主线。
-
-## 后续方向
-
-- 增加仓库详情抽屉。
-- 增加导出当前筛选结果到 JSON、CSV 或 Markdown。
-- 增加本地备注、个人标签、已读状态和复盘队列。
-- 增加更明确的规则分类体系，不只依赖 GitHub topics。
-- 逐步引入前端构建流程，拆分样式和模块。
-- 评估 Electron 或 Tauri 桌面版本，进一步降低 token 暴露风险。
+1. **安全性**：当前工具为本地运行设计。请勿将包含真实 Token/API Key 的 `.env` 文件或项目直接部署到公网服务器，以防密钥泄露。
+2. **速率限制**：初次同步大量 Star 仓库时，请注意 GitHub API 速率限制。工具内置了缓存机制，后续打开将优先使用缓存。
+3. **隐私提示**：使用 AI 引导功能时，工具会将当前选中仓库的名称、简介以及 README 内容发送至你配置的 AI API 服务端。
