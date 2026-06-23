@@ -9,8 +9,8 @@
 ### 项目数据看板
 ![项目数据看板](docs/images/dashboard.png)
 
-### AI 智能引导与分析
-![AI 智能引导](docs/images/ai_guide.png)
+### AI 智能导读与分析
+![AI 智能导读](docs/images/ai_guide.png)
 
 ---
 
@@ -26,7 +26,7 @@
   - **语言结构图表**：清晰直观的 Top 10 语言比例横向柱状图。
   - **热门主题词云/列表**：提炼最常关注的 GitHub topics 标签。
   - **活跃趋势折线图**：展示近 12 个月的 Star/更新时间活跃趋势。
-- **AI 智能代理与引导**：
+- **AI 智能代理与导读**：
   - 本地 `server.py` 充当静态文件服务器与 AI API 代理。
   - 一键对选定仓库进行 AI 分析，自动提取并精简 README，解析生成“项目简介”、“核心功能与优势”、“具体使用场景”和“用法示例”等信息。
   - 完美支持 OpenAI 兼容接口（如 GPT、Claude、火山引擎方舟等大模型），支持流式传输（Streaming）和实时取消请求。
@@ -50,7 +50,7 @@ GitHub_AccountInfoViewer/
 ├── docs/
 │   └── images/                   # 存放 README 预览图片的目录
 │       ├── dashboard.png         # 看板预览图
-│       └── ai_guide.png          # AI 引导对话框预览图
+│       └── ai_guide.png          # AI 导读对话框预览图
 └── tests/                        # 自动化测试目录（包含 Python 契约测试与 JS 逻辑测试）
 ```
 
@@ -118,4 +118,4 @@ http://127.0.0.1:8000/starred_repos_dashboard.html
 
 1. **安全性**：当前工具为本地运行设计。请勿将包含真实 Token/API Key 的 `.env` 文件或项目直接部署到公网服务器，以防密钥泄露。
 2. **速率限制**：初次同步大量 Star 仓库时，请注意 GitHub API 速率限制。工具内置了缓存机制，后续打开将优先使用缓存。
-3. **隐私提示**：使用 AI 引导功能时，工具会将当前选中仓库的名称、简介以及 README 内容发送至你配置的 AI API 服务端。
+3. **隐私提示**：使用 AI 导读功能时，工具会将当前选中仓库的名称、简介以及 README 内容发送至你配置的 AI API 服务端。

@@ -34,6 +34,48 @@ function sourceRepos(state) {
   return state.repos || [];
 }
 
+function renderRepoOwners(repo, state) {
+  if (state.activeSource !== "merged" && state.activeSource) {
+    return "";
+  }
+  
+  const matchedAccountIds = [];
+  for (const accountId of state.accountOrder) {
+    const account = state.accounts[accountId];
+    if (account && account.repos) {
+      const found = account.repos.some(r => r.fullName === repo.fullName);
+      if (found) {
+        matchedAccountIds.push(accountId);
+      }
+    }
+  }
+  
+  if (matchedAccountIds.length === 0 && repo.sourceAccount) {
+    matchedAccountIds.push(repo.sourceAccount);
+  }
+  
+  if (matchedAccountIds.length === 0) return "";
+  
+  const avatarsHtml = matchedAccountIds.map(accountId => {
+    const account = state.accounts[accountId];
+    if (!account) return "";
+    const avatarSrc = account.localAvatarBase64 || account.avatarUrl || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='20' height='20' fill='none'><circle cx='12' cy='12' r='11' fill='rgba(255,255,255,0.05)' stroke='rgba(255,255,255,0.1)' stroke-width='1.5'/><path d='M12 4a4 4 0 100 8 4 4 0 000-8zM4 20v-1a4 4 0 014-4h8a4 4 0 014 4v1' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' stroke-linecap='round'/></svg>";
+    const label = account.label || account.id;
+    return `
+      <img src="${avatarSrc}" 
+           alt="${escapeHtml(label)}" 
+           title="已由账号: ${escapeHtml(label)} Star" 
+           class="w-5 h-5 rounded-full border border-white/15 object-cover shadow-[0_2px_4px_rgba(0,0,0,0.3)]" />
+    `;
+  }).join("");
+  
+  return `
+    <div class="flex items-center -space-x-1.5 bg-white/5 px-2 py-0.5 rounded-lg border border-white/5 select-none hover:bg-white/10 transition-colors" title="Star 归属账号">
+      ${avatarsHtml}
+    </div>
+  `;
+}
+
 function parseRepoTimestamp(repo) {
   const t = Date.parse(repo.updatedAt || repo.updated_at || "");
   return Number.isFinite(t) ? t : 0;
@@ -537,11 +579,14 @@ function createView() {
               <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${languageColor(repo.language)}"></span>
               <span class="font-label-mono">${escapeHtml(repo.language || "Others")}</span>
             </span>
+            
+            ${renderRepoOwners(repo, state)}
+            
             <div class="flex items-center gap-3">
               <span class="text-[10px] font-label-mono text-on-surface-variant/50">${formatDate(repo.updatedAt || repo.updated_at)}</span>
               <button class="ai-guide-btn px-2.5 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-lg text-xs font-bold hover:bg-primary/20 transition-all flex items-center gap-1 shadow-sm active:scale-95 select-none" data-repo="${escapeHtml(owner)}/${escapeHtml(name)}" data-desc="${escapeHtml(repo.description || '')}">
                 <span class="material-symbols-outlined text-[13px]">magic_button</span>
-                AI 引导
+                AI 导读
               </button>
             </div>
           </div>

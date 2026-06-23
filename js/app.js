@@ -433,7 +433,7 @@ async function bootstrap() {
       }
       currentAIAborter = new AbortController();
       
-      modalTitle.innerHTML = `✨ AI 引导：${escapeHtml(owner)}/${escapeHtml(repoName)}`;
+      modalTitle.innerHTML = `✨ AI 导读：${escapeHtml(owner)}/${escapeHtml(repoName)}`;
       panel.innerHTML = `
         <div class="ai-loading-container" id="aiLoadingContainer">
           <div class="ai-loading-step">正在获取 GitHub README...</div>
@@ -532,7 +532,7 @@ async function bootstrap() {
       } finally {
         isDone = true;
         btn.disabled = false;
-        btn.textContent = "✨ AI 引导";
+        btn.innerHTML = '<span class="material-symbols-outlined text-[13px]">magic_button</span> AI 导读';
       }
     });
 
