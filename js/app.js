@@ -356,12 +356,9 @@ async function bootstrap() {
         localStorage.removeItem(`avatar_cache_${accountId}`);
       }
     });
-    document.getElementById("expandAll").addEventListener("click", () => {
-      view.setExpandZh(true);
-      view.render(store.getState());
-    });
-    document.getElementById("collapseAll").addEventListener("click", () => {
-      view.setExpandZh(false);
+    document.getElementById("toggleExpandAll").addEventListener("click", () => {
+      const nextState = !view.getExpandZh();
+      view.setExpandZh(nextState);
       view.render(store.getState());
     });
     document.getElementById("githubListsContainer").addEventListener("click", (e) => {

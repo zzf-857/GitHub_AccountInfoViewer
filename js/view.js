@@ -617,10 +617,26 @@ function createView() {
     renderAccountDropdown(state);
     renderList(state, filtered);
     renderBatchActionBar(state);
+
+    // 同步左下角展开/收起解读按钮的文字与状态
+    const toggleBtn = document.getElementById("toggleExpandAll");
+    if (toggleBtn) {
+      toggleBtn.innerHTML = expandZh ? `
+        <span class="material-symbols-outlined text-sm">unfold_less</span>
+        收起自动解读
+      ` : `
+        <span class="material-symbols-outlined text-sm">bolt</span>
+        展开自动解读
+      `;
+    }
   }
 
   function setExpandZh(value) {
     expandZh = value;
+  }
+
+  function getExpandZh() {
+    return expandZh;
   }
 
   function resize() {
@@ -628,7 +644,7 @@ function createView() {
     if (activityChart) activityChart.resize();
   }
 
-  return { render, setExpandZh, resize, getFilteredRepos };
+  return { render, setExpandZh, getExpandZh, resize, getFilteredRepos };
 }
 
 window.DashboardView = { createView };
