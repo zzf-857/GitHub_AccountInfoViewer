@@ -11,6 +11,37 @@ def log(msg):
     """写入 stderr 以避免 stdout 缓冲问题"""
     print(msg, file=sys.stderr, flush=True)
 
+def search_duckduckgo(query):
+    import re
+    url = "https://html.duckduckgo.com/html/"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+    }
+    try:
+        log(f"[Search] Querying DuckDuckGo: {query}")
+        resp = requests.get(url, params={"q": query}, headers=headers, timeout=10)
+        if resp.status_code != 200:
+            log(f"[Search] DuckDuckGo HTTP error: {resp.status_code}")
+            return []
+        
+        html = resp.text
+        # Use regex to match result__a and result__snippet tags directly
+        matches = re.findall(r'<a[^>]*class="result__a"[^>]*>(.*?)</a>.*?<a[^>]*class="result__snippet"[^>]*>(.*?)</a>', html, re.DOTALL)
+        results = []
+        for title_html, snippet_html in matches:
+            title = re.sub(r'<[^>]+>', '', title_html).strip()
+            snippet = re.sub(r'<[^>]+>', '', snippet_html).strip()
+            title = title.replace('&amp;', '&').replace('&quot;', '"').replace('&#x27;', "'").replace('&lt;', '<').replace('&gt;', '>')
+            snippet = snippet.replace('&amp;', '&').replace('&quot;', '"').replace('&#x27;', "'").replace('&lt;', '<').replace('&gt;', '>')
+            results.append({"title": title, "snippet": snippet})
+            if len(results) >= 5:
+                break
+        log(f"[Search] Found {len(results)} search results")
+        return results
+    except Exception as e:
+        log(f"[Search] Error performing web search: {e}")
+        return []
+
 # 尝试加载 .env 文件（简易实现，不依赖 python-dotenv）
 try:
     with open(".env", "r", encoding="utf-8") as f:
@@ -158,16 +189,38 @@ class APIProxyHandler(SimpleHTTPRequestHandler):
             except Exception as e:
                 readme_content = "请求 README 时发生网络错误。"
 
-            # 2. Call AI API
-            prompt = f"""你是一个严谨且资深的开源技术专家。请根据以下 GitHub 仓库的简介和 README 片段，如果你可以联网，你可以先联网搜索这个github仓库的相关信息，为开发者真实地介绍这个项目。
+            # 2. Web Search
+            send_status("正在联网搜索该仓库的社区理解与评价...")
+            search_query = f"{owner}/{repo} github"
+            search_results = search_duckduckgo(search_query)
+            
+            search_context = ""
+            if search_results:
+                search_context = "\n全网对于该开源仓库的讨论与介绍摘要：\n"
+                for item in search_results:
+                    search_context += f"- **{item['title']}**: {item['snippet']}\n"
+            else:
+                # 再次用 repo 名字进行兜底搜索
+                fallback_results = search_duckduckgo(f"{repo} library github")
+                if fallback_results:
+                    search_context = "\n全网对于该开源仓库的讨论与介绍摘要：\n"
+                    for item in fallback_results:
+                        search_context += f"- **{item['title']}**: {item['snippet']}\n"
+
+            # 3. Call AI API
+            send_status("AI 正在根据全网数据分析中...")
+            prompt = f"""你是一个严谨且资深的开源技术专家。请根据以下 GitHub 仓库的简介、README 片段以及社区全网搜索结果，为开发者真实、全面地介绍和解读这个项目。
 要求：（使用 Markdown 标题采用“#” 标识 的方式  正文采用无序列表和有序列表的形式，结构清晰易读）。
-1. 第一段，大标题：项目简介：（用通俗的话说明它是做什么的。）
-2. 第二段，列举 2-3 个核心功能或优势。并且想一个它可以用来干什么,说一个某一个具体的使用场景或用法。解决了什么问题。
+1. 第一段，大标题：# 项目简介
+（用通俗的话说明它是做什么的，并结合互联网社区了解到的大家对于它的主流认知、定位和口碑。）
+2. 第二段，大标题：# 核心功能与使用场景
+（列举 2-3 个核心功能或优势。并且结合搜索结果或README，想一个它可以用来干什么,说一个具体的、典型的真实使用场景或用法。解决了什么问题。）
 3. 语言简练，总字数500-1500字，直接输出内容，不要任何寒暄。
-4. 【重要】如果 README 内容显示获取失败或为空，且仅靠简介无法判断该项目真实用途时，请坦诚回答"提供的上下文不足，无法准确解读该仓库"，严禁根据仓库名字自行编造或猜测功能。
+4. 【重要】如果 README 内容显示获取失败或为空，且仅靠简介和搜索结果依然无法判断该项目真实用途时，请坦诚回答"提供的上下文不足，无法准确解读该仓库"，严禁根据仓库名字自行编造或猜测功能。
 
 仓库名：{owner}/{repo}
 简介：{description}
+{search_context}
 README 片段：
 {readme_content}
 """

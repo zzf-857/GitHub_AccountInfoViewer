@@ -515,6 +515,29 @@ async function bootstrap() {
               if (dataStr === '[DONE]') continue;
               try {
                 const data = JSON.parse(dataStr);
+                if (data.status) {
+                  const container = document.getElementById("aiLoadingContainer");
+                  if (container) {
+                    let stepsHtml = "";
+                    if (data.status.includes("联网搜索")) {
+                      stepsHtml = `
+                        <div class="ai-loading-step completed">✓ 正在获取 GitHub README...</div>
+                        <div class="ai-loading-step thinking">正在联网搜索该仓库的社区理解与评价...</div>
+                      `;
+                    } else if (data.status.includes("思考") || data.status.includes("分析")) {
+                      stepsHtml = `
+                        <div class="ai-loading-step completed">✓ 正在获取 GitHub README...</div>
+                        <div class="ai-loading-step completed">✓ 正在联网搜索该仓库的社区理解与评价...</div>
+                        <div class="ai-loading-step thinking">AI 正在根据全网数据深度思考中...</div>
+                      `;
+                    } else {
+                      stepsHtml = `
+                        <div class="ai-loading-step thinking">${escapeHtml(data.status)}</div>
+                      `;
+                    }
+                    container.innerHTML = stepsHtml;
+                  }
+                }
                 if (data.content) {
                   fullText += data.content;
                 }
