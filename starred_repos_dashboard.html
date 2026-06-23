@@ -78,6 +78,68 @@
       box-shadow: 0 0 8px rgba(76, 215, 246, 0.2);
     }
 
+    /* Drag-and-drop custom avatar style */
+    .drag-avatar-stack {
+      position: relative;
+      width: 240px;
+      height: 90px;
+    }
+
+    .drag-avatar-card {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      background: rgba(22, 24, 34, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+
+    .drag-avatar-card-base2 {
+      transform: translate(8px, 8px) rotate(3deg);
+      background: rgba(22, 24, 34, 0.6);
+      z-index: 10;
+      border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .drag-avatar-card-base1 {
+      transform: translate(4px, 4px) rotate(-1.5deg);
+      background: rgba(22, 24, 34, 0.85);
+      z-index: 20;
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .drag-avatar-card-top {
+      transform: translate(0, 0);
+      z-index: 30;
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 12px rgba(76, 215, 246, 0.2);
+    }
+
+    .drag-avatar-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: var(--neon-green);
+      color: #111;
+      font-weight: 700;
+      font-size: 11px;
+      height: 20px;
+      min-width: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 8px rgba(78, 222, 163, 0.6);
+      z-index: 40;
+    }
+
     /* Custom Scrollbar */
     ::-webkit-scrollbar {
       width: 6px;
@@ -465,6 +527,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Drag-and-drop custom avatar container -->
+  <div id="drag-avatar-container" class="fixed pointer-events-none -left-[9999px] -top-[9999px] z-[-1000]"></div>
 
   <script src="js/github-api.js"></script>
   <script src="js/insights.js"></script>

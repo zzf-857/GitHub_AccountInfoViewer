@@ -798,7 +798,54 @@ async function bootstrap() {
       if (!state.selectedRepoIds.includes(repoId)) {
         store.patch({ selectedRepoIds: [repoId] });
       }
-      e.dataTransfer.setData("text/plain", JSON.stringify(store.getState().selectedRepoIds));
+
+      const currentSelected = store.getState().selectedRepoIds;
+      const count = currentSelected.length;
+      
+      // 获取当前被拖拽的仓库名字
+      const repoName = card.querySelector("h3 a")?.innerText || card.querySelector("h3")?.innerText || "GitHub Repository";
+      
+      let html = "";
+      if (count > 1) {
+        html = `
+          <div class="drag-avatar-stack">
+            <div class="drag-avatar-card drag-avatar-card-base2"></div>
+            <div class="drag-avatar-card drag-avatar-card-base1"></div>
+            <div class="drag-avatar-card drag-avatar-card-top">
+              <div class="text-[10px] text-slate-400 font-mono truncate">拖拽中...</div>
+              <div class="text-xs font-bold text-slate-100 truncate mt-1">${repoName}</div>
+              <div class="drag-avatar-badge">+${count}</div>
+            </div>
+          </div>
+        `;
+      } else {
+        html = `
+          <div class="drag-avatar-stack" style="width: 200px; height: 70px;">
+            <div class="drag-avatar-card drag-avatar-card-top" style="height: 100%;">
+              <div class="text-[10px] text-slate-400 font-mono truncate">拖拽中...</div>
+              <div class="text-xs font-bold text-slate-100 truncate mt-1">${repoName}</div>
+            </div>
+          </div>
+        `;
+      }
+      
+      const container = document.getElementById("drag-avatar-container");
+      container.innerHTML = html;
+      
+      // 设置自定义拖拽快照图像
+      // xOffset = 100, yOffset = 45 使得鼠标差不多在卡片堆中心
+      e.dataTransfer.setDragImage(container.firstElementChild, 100, 45);
+
+      // 使用 setTimeout 延迟把原卡片半透明化，防止拖拽默认生成的快照在拖拽开始的一瞬间变透明
+      setTimeout(() => {
+        document.querySelectorAll("#list .repo-card").forEach(c => {
+          if (currentSelected.includes(c.dataset.id)) {
+            c.classList.add("opacity-30");
+          }
+        });
+      }, 0);
+
+      e.dataTransfer.setData("text/plain", JSON.stringify(currentSelected));
       e.dataTransfer.effectAllowed = "move";
       document.querySelectorAll(".github-list-btn").forEach(btn => {
         if (btn.dataset.list !== undefined && btn.dataset.list !== "unclassified") {
@@ -810,6 +857,9 @@ async function bootstrap() {
     document.getElementById("list").addEventListener("dragend", (e) => {
       document.querySelectorAll(".github-list-btn").forEach(btn => {
         btn.classList.remove("drop-target-active", "drag-over");
+      });
+      document.querySelectorAll("#list .repo-card.opacity-30").forEach(c => {
+        c.classList.remove("opacity-30");
       });
     });
 
