@@ -112,7 +112,9 @@ async function bootstrap() {
   store.setAccounts(envAccounts);
   renderSourceOptions(store.getState());
   const sourceInfo = document.getElementById("sourceInfo");
-  sourceInfo.textContent = `已从 .env 读取 ${envAccounts.length} 个账号配置。`;
+  if (sourceInfo) {
+    sourceInfo.textContent = `已从 .env 读取 ${envAccounts.length} 个账号配置。`;
+  }
 
   async function refreshData(source) {
     const state = store.getState();
@@ -273,6 +275,7 @@ async function bootstrap() {
     (async function checkAIHealth() {
       const dot = document.getElementById("aiHealthDot");
       const label = document.getElementById("aiHealthLabel");
+      if (!dot || !label) return;
       try {
         const healthCtrl = new AbortController();
         const healthTimeout = setTimeout(() => healthCtrl.abort(), 35000);
