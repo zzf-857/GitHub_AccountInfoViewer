@@ -443,7 +443,7 @@ function createView() {
     if (activityChart) activityChart.resize();
   }
 
-  return { render, setExpandZh, resize };
+  return { render, setExpandZh, resize, getFilteredRepos };
 }
 
 window.DashboardView = { createView };

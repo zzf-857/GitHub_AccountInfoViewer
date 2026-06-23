@@ -198,6 +198,12 @@ async function bootstrap() {
   });
 
   function bindEvents() {
+    let lastCheckedId = null;
+    let isSelecting = false;
+    let startX = 0;
+    let startY = 0;
+    let selectionBox = null;
+    let initialSelectedRepoIds = [];
     document.getElementById("globalSearch").addEventListener("input", (e) => store.setFilters({ keyword: e.target.value }));
     document.getElementById("lang").addEventListener("change", (e) => store.setFilters({ language: e.target.value }));
     document.getElementById("topicFilter").addEventListener("change", (e) => store.setFilters({ topic: e.target.value }));
@@ -502,7 +508,131 @@ async function bootstrap() {
     document.getElementById("list").addEventListener("click", (e) => {
       const checkbox = e.target.closest(".repo-checkbox");
       if (checkbox) {
-        store.toggleRepoSelection(checkbox.dataset.id);
+        const currentId = checkbox.dataset.id;
+        const state = store.getState();
+        
+        if (e.shiftKey && lastCheckedId) {
+          const filtered = view.getFilteredRepos(state);
+          const filteredIds = filtered.map(r => r.id);
+          const fromIdx = filteredIds.indexOf(lastCheckedId);
+          const toIdx = filteredIds.indexOf(currentId);
+          if (fromIdx !== -1 && toIdx !== -1) {
+            const start = Math.min(fromIdx, toIdx);
+            const end = Math.max(fromIdx, toIdx);
+            const rangeIds = filteredIds.slice(start, end + 1);
+            
+            const wasSelected = state.selectedRepoIds.includes(currentId);
+            const targetChecked = !wasSelected;
+            
+            let currentSelected = [...state.selectedRepoIds];
+            if (targetChecked) {
+              for (const id of rangeIds) {
+                if (!currentSelected.includes(id)) {
+                  currentSelected.push(id);
+                }
+              }
+            } else {
+              currentSelected = currentSelected.filter(id => !rangeIds.includes(id));
+            }
+            store.patch({ selectedRepoIds: currentSelected });
+            lastCheckedId = currentId;
+            return;
+          }
+        }
+        
+        store.toggleRepoSelection(currentId);
+        lastCheckedId = currentId;
+      }
+    });
+
+    // Ctrl + 鼠标右键 框选逻辑
+    window.addEventListener("contextmenu", (e) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+      }
+    });
+
+    function onMouseMove(e) {
+      if (!isSelecting || !selectionBox) return;
+      
+      const currentX = e.clientX;
+      const currentY = e.clientY;
+      
+      const boxLeft = Math.min(startX, currentX);
+      const boxTop = Math.min(startY, currentY);
+      const boxWidth = Math.abs(startX - currentX);
+      const boxHeight = Math.abs(startY - currentY);
+      
+      selectionBox.style.left = `${boxLeft}px`;
+      selectionBox.style.top = `${boxTop}px`;
+      selectionBox.style.width = `${boxWidth}px`;
+      selectionBox.style.height = `${boxHeight}px`;
+      
+      const cards = document.querySelectorAll("#list .repo-card");
+      cards.forEach((card) => {
+        const rect = card.getBoundingClientRect();
+        const intersect = !(
+          rect.left > boxLeft + boxWidth ||
+          rect.right < boxLeft ||
+          rect.top > boxTop + boxHeight ||
+          rect.bottom < boxTop
+        );
+        
+        const id = card.dataset.id;
+        const checkbox = card.querySelector(".repo-checkbox");
+        const shouldBeSelected = initialSelectedRepoIds.includes(id) || intersect;
+        
+        if (shouldBeSelected) {
+          card.classList.add("selected");
+          if (checkbox) checkbox.checked = true;
+        } else {
+          card.classList.remove("selected");
+          if (checkbox) checkbox.checked = false;
+        }
+      });
+    }
+
+    function onMouseUp(e) {
+      if (!isSelecting) return;
+      isSelecting = false;
+      
+      if (selectionBox) {
+        selectionBox.remove();
+        selectionBox = null;
+      }
+      
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      
+      const selectedIds = [];
+      const cards = document.querySelectorAll("#list .repo-card.selected");
+      cards.forEach((card) => {
+        if (card.dataset.id) {
+          selectedIds.push(card.dataset.id);
+        }
+      });
+      
+      store.patch({ selectedRepoIds: selectedIds });
+    }
+
+    document.getElementById("list").addEventListener("mousedown", (e) => {
+      if (e.button === 2 && e.ctrlKey) {
+        e.preventDefault();
+        isSelecting = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        initialSelectedRepoIds = [...store.getState().selectedRepoIds];
+        
+        selectionBox = document.createElement("div");
+        selectionBox.className = "selection-box";
+        selectionBox.style.left = `${startX}px`;
+        selectionBox.style.top = `${startY}px`;
+        selectionBox.style.width = "0px";
+        selectionBox.style.height = "0px";
+        document.body.appendChild(selectionBox);
+        
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", onMouseUp);
       }
     });
 

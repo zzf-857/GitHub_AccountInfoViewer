@@ -1276,6 +1276,15 @@
       .repo-side { justify-items: start; }
       .button-row { grid-template-columns: 1fr; }
     }
+    /* Selection box for lasso/box selection */
+    .selection-box {
+      position: fixed;
+      border: 1.5px dashed var(--neon-cyan);
+      background: rgba(0, 240, 255, 0.1);
+      pointer-events: none;
+      z-index: 10000;
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+    }
   </style>
 </head>
 <body>
