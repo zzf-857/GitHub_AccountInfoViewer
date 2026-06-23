@@ -440,7 +440,8 @@ async function bootstrap() {
           <div class="ai-loading-step thinking">AI 正在深度思考中...</div>
         </div>
       `;
-      modalOverlay.classList.add("visible");
+      modalOverlay.classList.remove("hidden");
+      modalOverlay.classList.add("flex");
       
       btn.disabled = true;
       btn.textContent = "✨ 正在解读...";
@@ -537,7 +538,11 @@ async function bootstrap() {
     });
 
     const closeAIModal = () => {
-      document.getElementById("aiModalOverlay").classList.remove("visible");
+      const overlay = document.getElementById("aiModalOverlay");
+      if (overlay) {
+        overlay.classList.remove("flex");
+        overlay.classList.add("hidden");
+      }
       if (currentAIAborter) {
         currentAIAborter.abort();
         currentAIAborter = null;
