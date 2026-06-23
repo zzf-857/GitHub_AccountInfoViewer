@@ -149,6 +149,225 @@
       margin-top: 18px;
     }
 
+    /* Drag & Drop premium effects */
+    .github-list-btn.drop-target-active {
+      border-style: dashed;
+      border-color: var(--neon-cyan);
+      animation: pulse-border 1.5s infinite;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+    }
+    
+    @keyframes pulse-border {
+      0% { border-color: rgba(0, 240, 255, 0.4); box-shadow: 0 0 4px rgba(0, 240, 255, 0.1); }
+      50% { border-color: rgba(0, 240, 255, 1.0); box-shadow: 0 0 14px rgba(0, 240, 255, 0.4); }
+      100% { border-color: rgba(0, 240, 255, 0.4); box-shadow: 0 0 4px rgba(0, 240, 255, 0.1); }
+    }
+
+    .github-list-btn.drag-over {
+      background: rgba(0, 240, 255, 0.2) !important;
+      border-color: var(--neon-cyan) !important;
+      transform: scale(1.02);
+    }
+
+    .repo-card.dragging {
+      opacity: 0.4;
+      border: 1px dashed var(--neon-cyan);
+    }
+
+    .repo-card.selected {
+      background: rgba(0, 240, 255, 0.04) !important;
+      border-color: rgba(0, 240, 255, 0.4) !important;
+    }
+
+    .repo-card {
+      display: flex !important;
+      align-items: center !important;
+    }
+
+    .repo-select-container {
+      display: flex;
+      align-items: center;
+      padding-right: 12px;
+    }
+
+    .repo-checkbox {
+      width: 18px !important;
+      height: 18px !important;
+      min-height: auto !important;
+      cursor: pointer;
+      accent-color: var(--neon-cyan);
+    }
+
+    .repo-card-content {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(160px, auto);
+      gap: 18px;
+      width: 100%;
+    }
+
+    /* Floating Batch Action Bar */
+    .batch-action-bar {
+      position: fixed;
+      bottom: -80px; /* Hidden by default */
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(90%, 800px);
+      height: 64px;
+      padding: 0 24px;
+      background: rgba(22, 25, 32, 0.95);
+      border: 1px solid var(--neon-cyan);
+      border-radius: 32px;
+      box-shadow: 0 8px 32px rgba(0, 240, 255, 0.15), 0 0 1px rgba(0, 240, 255, 0.5);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 1000;
+      transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .batch-action-bar.visible {
+      bottom: 24px;
+    }
+
+    .batch-info {
+      font-size: 15px;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .batch-info span {
+      color: var(--neon-cyan);
+      font-weight: 600;
+      margin: 0 4px;
+    }
+
+    .batch-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .batch-btn {
+      min-height: 36px !important;
+      padding: 0 16px !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      width: auto !important;
+      border-radius: 18px !important;
+      transition: all 0.2s ease;
+    }
+
+    .batch-btn-danger {
+      background: rgba(255, 0, 102, 0.1);
+      color: var(--neon-pink);
+      border-color: rgba(255, 0, 102, 0.4);
+    }
+
+    .batch-btn-danger:hover {
+      background: rgba(255, 0, 102, 0.2);
+      border-color: var(--neon-pink);
+      box-shadow: 0 0 10px rgba(255, 0, 102, 0.2);
+    }
+
+    .batch-btn-secondary {
+      background: transparent;
+      color: var(--muted);
+      border-color: var(--line);
+    }
+
+    .batch-btn-secondary:hover {
+      color: var(--text);
+      border-color: var(--line-strong);
+    }
+
+    /* Sidebar List Inline Actions */
+    .github-list-btn {
+      position: relative;
+      padding-right: 80px !important; /* Make room for counts and edit buttons */
+    }
+
+    .list-meta-actions {
+      position: absolute;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .list-action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--faint);
+      cursor: pointer;
+      padding: 0;
+      min-height: auto !important;
+      width: 24px !important;
+      transition: all 0.15s ease;
+      opacity: 0; /* Hidden by default */
+    }
+
+    .github-list-btn:hover .list-action-btn {
+      opacity: 1; /* Show on hover */
+    }
+
+    .list-action-btn:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+      border-color: var(--line);
+    }
+
+    .list-action-btn.delete:hover {
+      color: var(--neon-pink);
+      background: rgba(255, 0, 102, 0.1);
+      border-color: rgba(255, 0, 102, 0.2);
+    }
+
+    .add-list-section {
+      margin-top: 12px;
+      padding: 0 4px;
+    }
+
+    .add-list-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      min-height: 38px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .add-list-btn:hover {
+      color: var(--neon-cyan);
+      border-color: var(--neon-cyan);
+      background: rgba(0, 240, 255, 0.03);
+    }
+
+    /* Inline Edit Inputs */
+    .list-edit-input {
+      width: calc(100% - 24px) !important;
+      min-height: 32px !important;
+      height: 32px !important;
+      padding: 0 8px !important;
+      font-size: 14px !important;
+      background: var(--surface) !important;
+      border: 1px solid var(--neon-cyan) !important;
+      border-radius: 4px !important;
+      color: var(--text) !important;
+    }
+
     .github-lists-container {
       display: flex;
       flex-direction: column;
@@ -1263,6 +1482,19 @@
         <div id="listWrap"><div id="list"></div></div>
       </section>
     </main>
+  </div>
+
+  <!-- Floating Batch Action Bar -->
+  <div class="batch-action-bar" id="batchActionBar">
+    <div class="batch-info">已选择 <span id="batchSelectedCount">0</span> 个仓库</div>
+    <div class="batch-actions" style="display: flex; align-items: center; gap: 12px;">
+      <select id="batchListSelect" style="width: 160px; min-height: 36px; height: 36px; padding: 0 8px; border-radius: 18px; font-size: 13px; background: var(--surface-raised); border: 1px solid var(--line); color: var(--text);">
+        <option value="">加入目标 List...</option>
+        <!-- JS will populate options here -->
+      </select>
+      <button class="batch-btn batch-btn-danger" id="batchUnstarBtn">批量取消 Star</button>
+      <button class="batch-btn batch-btn-secondary" id="batchClearBtn">取消选择</button>
+    </div>
   </div>
 
   <!-- AI Modal -->

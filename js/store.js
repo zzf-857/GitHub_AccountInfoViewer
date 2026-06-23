@@ -13,7 +13,8 @@ const defaultState = {
   refreshIntervalMs: 5 * 60 * 1000,
   autoRefreshEnabled: true,
   rateLimitByAccount: {},
-  diffSummary: { added: 0, removed: 0 }
+  diffSummary: { added: 0, removed: 0 },
+  selectedRepoIds: []
 };
 
 function clone(obj) {
@@ -55,6 +56,7 @@ function createStore() {
           label: account.label,
           token: account.token || "",
           repos: [],
+          lists: [],
           etag: "",
           enabled: true
         };
@@ -75,6 +77,23 @@ function createStore() {
     setRepos(allRepos) {
       state.previousRepos = state.repos;
       state.repos = allRepos;
+      notify();
+    },
+    toggleRepoSelection(repoId) {
+      const idx = state.selectedRepoIds.indexOf(repoId);
+      if (idx >= 0) {
+        state.selectedRepoIds.splice(idx, 1);
+      } else {
+        state.selectedRepoIds.push(repoId);
+      }
+      notify();
+    },
+    clearRepoSelection() {
+      state.selectedRepoIds = [];
+      notify();
+    },
+    selectAllRepos(repoIds) {
+      state.selectedRepoIds = [...repoIds];
       notify();
     }
   };

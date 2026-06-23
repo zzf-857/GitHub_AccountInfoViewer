@@ -280,13 +280,40 @@ function createView() {
     `);
 
     // 2. 自定义 Lists
+    const listNodeIds = {};
+    const listNodeAccounts = {};
+    for (const accountId of state.accountOrder) {
+      const account = state.accounts[accountId];
+      if (account && account.lists) {
+        for (const lst of account.lists) {
+          listNodeIds[lst.name] = lst.id;
+          listNodeAccounts[lst.name] = accountId;
+        }
+      }
+    }
+
     for (const item of stats.lists) {
       const active = currentList === item.name ? "active" : "";
+      const nodeId = listNodeIds[item.name] || "";
+      const accountId = listNodeAccounts[item.name] || "";
+      
       html.push(`
-        <button class="github-list-btn ${active}" data-list="${escapeHtml(item.name)}">
-          <span>${escapeHtml(item.name)}</span>
-          <span class="list-count">${item.value}</span>
-        </button>
+        <div class="github-list-btn-wrap" style="position: relative; width: 100%;">
+          <button class="github-list-btn ${active}" data-list="${escapeHtml(item.name)}" data-id="${nodeId}" data-account="${accountId}">
+            <span class="list-name-text">${escapeHtml(item.name)}</span>
+            <span class="list-count" style="margin-right: ${nodeId ? '44px' : '0'}">${item.value}</span>
+            ${nodeId ? `
+              <span class="list-meta-actions">
+                <button class="list-action-btn edit" data-id="${nodeId}" data-account="${accountId}" data-name="${escapeHtml(item.name)}" title="重命名 List">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                </button>
+                <button class="list-action-btn delete" data-id="${nodeId}" data-account="${accountId}" data-name="${escapeHtml(item.name)}" title="删除 List">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </span>
+            ` : ""}
+          </button>
+        </div>
       `);
     }
 
@@ -299,7 +326,49 @@ function createView() {
       </button>
     `);
 
+    // 4. 新建 List 按钮
+    html.push(`
+      <div class="add-list-section">
+        <button class="add-list-btn" id="addNewListBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          新建 List
+        </button>
+      </div>
+    `);
+
     container.innerHTML = html.join("");
+  }
+
+  function renderBatchActionBar(state) {
+    const bar = document.getElementById("batchActionBar");
+    const countEl = document.getElementById("batchSelectedCount");
+    const select = document.getElementById("batchListSelect");
+    if (!bar || !countEl) return;
+
+    const selectedCount = state.selectedRepoIds.length;
+    if (selectedCount > 0) {
+      countEl.textContent = selectedCount;
+      bar.classList.add("visible");
+
+      // Populate lists dropdown
+      const uniqueLists = new Set();
+      for (const accountId of state.accountOrder) {
+        const account = state.accounts[accountId];
+        if (account && account.lists) {
+          for (const lst of account.lists) {
+            uniqueLists.add(lst.name);
+          }
+        }
+      }
+
+      const options = ['<option value="">加入目标 List...</option>'];
+      for (const listName of [...uniqueLists].sort()) {
+        options.push(`<option value="${escapeHtml(listName)}">${escapeHtml(listName)}</option>`);
+      }
+      select.innerHTML = options.join("");
+    } else {
+      bar.classList.remove("visible");
+    }
   }
 
   function renderList(state, filtered) {
@@ -321,25 +390,32 @@ function createView() {
       const topics = (repo.topics || []).slice(0, 5);
       const repoLists = repo.lists || [];
       const descriptionKind = DashboardInsights.getDescriptionKind(repo);
+      const isSelected = state.selectedRepoIds.includes(repo.id);
+      
       return `
-        <article class="repo-card ${expandZh ? "expanded" : ""}">
-          <div>
-            <h3 class="repo-title"><a href="${escapeHtml(repo.url || repo.htmlUrl || "#")}" target="_blank" rel="noopener noreferrer"><span class="repo-owner">${escapeHtml(owner)}/</span>${escapeHtml(name)}</a></h3>
-            <p class="repo-desc">${escapeHtml(repo.description || "暂无简介")}</p>
-            ${descriptionKind === "en" ? `<div class="repo-desc-cn"><strong>自动解读：</strong>${escapeHtml(DashboardInsights.zhAuto(repo.description))}</div>` : ""}
-            <div class="repo-topics">
-              ${repoLists.map((listName) => `<span class="repo-list-tag">${escapeHtml(listName)}</span>`).join("")}
-              ${topics.map((topic) => `<span class="repo-topic">${escapeHtml(topic)}</span>`).join("")}
-              ${descriptionKind === "empty" ? '<span class="repo-topic">暂无简介</span>' : ""}
-            </div>
-            <button class="ai-guide-btn" data-repo="${escapeHtml(owner)}/${escapeHtml(name)}" data-desc="${escapeHtml(repo.description || '')}" data-panel-id="ai-panel-${escapeHtml(owner)}-${escapeHtml(name)}">✨ AI 引导</button>
+        <article class="repo-card ${expandZh ? "expanded" : ""} ${isSelected ? "selected" : ""}" draggable="true" data-id="${repo.id}">
+          <div class="repo-select-container">
+            <input type="checkbox" class="repo-checkbox" ${isSelected ? "checked" : ""} data-id="${repo.id}" />
           </div>
-          <aside class="repo-side">
-            <span class="repo-language"><span class="language-dot" style="background:${languageColor(repo.language)}"></span>${escapeHtml(repo.language || "Others")}</span>
-            <span class="repo-meta">★ ${Number(repo.stars || 0).toLocaleString("zh-CN")} ｜ Fork ${Number(repo.forks || 0).toLocaleString("zh-CN")}</span>
-            <span class="repo-meta">${formatDate(repo.updatedAt || repo.updated_at)}</span>
-            ${repo.archived ? '<span class="repo-topic">已归档</span>' : ""}
-          </aside>
+          <div class="repo-card-content">
+            <div>
+              <h3 class="repo-title"><a href="${escapeHtml(repo.url || repo.htmlUrl || "#")}" target="_blank" rel="noopener noreferrer"><span class="repo-owner">${escapeHtml(owner)}/</span>${escapeHtml(name)}</a></h3>
+              <p class="repo-desc">${escapeHtml(repo.description || "暂无简介")}</p>
+              ${descriptionKind === "en" ? `<div class="repo-desc-cn"><strong>自动解读：</strong>${escapeHtml(DashboardInsights.zhAuto(repo.description))}</div>` : ""}
+              <div class="repo-topics">
+                ${repoLists.map((listName) => `<span class="repo-list-tag">${escapeHtml(listName)}</span>`).join("")}
+                ${topics.map((topic) => `<span class="repo-topic">${escapeHtml(topic)}</span>`).join("")}
+                ${descriptionKind === "empty" ? '<span class="repo-topic">暂无简介</span>' : ""}
+              </div>
+              <button class="ai-guide-btn" data-repo="${escapeHtml(owner)}/${escapeHtml(name)}" data-desc="${escapeHtml(repo.description || '')}" data-panel-id="ai-panel-${escapeHtml(owner)}-${escapeHtml(name)}">✨ AI 引导</button>
+            </div>
+            <aside class="repo-side">
+              <span class="repo-language"><span class="language-dot" style="background:${languageColor(repo.language)}"></span>${escapeHtml(repo.language || "Others")}</span>
+              <span class="repo-meta">★ ${Number(repo.stars || 0).toLocaleString("zh-CN")} ｜ Fork ${Number(repo.forks || 0).toLocaleString("zh-CN")}</span>
+              <span class="repo-meta">${formatDate(repo.updatedAt || repo.updated_at)}</span>
+              ${repo.archived ? '<span class="repo-topic">已归档</span>' : ""}
+            </aside>
+          </div>
         </article>
       `;
     }).join("");
@@ -355,6 +431,7 @@ function createView() {
     renderStatus(state, filtered);
     renderGitHubLists(state);
     renderList(state, filtered);
+    renderBatchActionBar(state);
   }
 
   function setExpandZh(value) {

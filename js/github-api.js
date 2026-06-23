@@ -26,6 +26,7 @@ function normalizeRepo(item, sourceAccount, sourceAccountLabel = "") {
   const language = repoItem.language || "Others (未分类)";
   return {
     id: `${sourceAccount}:${fullName}`,
+    nodeId: repoItem.node_id || "",
     fullName,
     repo: fullName,
     owner,
@@ -111,6 +112,7 @@ async function fetchAllLists(token) {
       viewer {
         lists(first: 100, after: $after) {
           nodes {
+            id
             name
             items(first: 100) {
               nodes {
@@ -140,7 +142,7 @@ async function fetchAllLists(token) {
               const repos = (node.items?.nodes || [])
                 .filter(item => item && item.nameWithOwner)
                 .map(item => item.nameWithOwner);
-              lists.push({ name: node.name, repos });
+              lists.push({ id: node.id, name: node.name, repos });
             }
           }
         }
@@ -194,7 +196,108 @@ async function fetchAllStarred({ token, sourceAccount, sourceAccountLabel = "", 
     repo.lists = repoToLists[repo.fullName] || [];
   }
 
-  return { repos: normalized, etag, rateLimit: lastRateLimit, unchanged: false };
+  return { repos: normalized, lists, etag, rateLimit: lastRateLimit, unchanged: false };
 }
 
-window.GitHubApi = { fetchAllStarred };
+async function unstarRepository({ token, owner, repo }) {
+  const res = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}/subscription`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "X-GitHub-Api-Version": API_VERSION
+    }
+  });
+  // Note: subscription is watch, stars is /user/starred/{owner}/{repo}
+  const res2 = await fetch(`${GITHUB_API_BASE}/user/starred/${owner}/${repo}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "X-GitHub-Api-Version": API_VERSION
+    }
+  });
+  if (!res2.ok && res2.status !== 404) {
+    const text = await res2.text();
+    throw new Error(`取消 Star 失败: ${text || res2.statusText}`);
+  }
+}
+
+async function starRepository({ token, owner, repo }) {
+  const res = await fetch(`${GITHUB_API_BASE}/user/starred/${owner}/${repo}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "X-GitHub-Api-Version": API_VERSION,
+      "Content-Length": "0"
+    }
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Star 失败: ${text || res.statusText}`);
+  }
+}
+
+async function updateRepositoryLists({ token, repositoryNodeId, listNodeIds }) {
+  const query = `
+    mutation($itemId: ID!, $listIds: [ID!]!) {
+      updateUserListsForItem(input: { itemId: $itemId, listIds: $listIds }) {
+        item {
+          ... on Repository {
+            id
+          }
+        }
+      }
+    }
+  `;
+  await fetchGraphQL(token, query, { itemId: repositoryNodeId, listIds: listNodeIds });
+}
+
+async function createUserList({ token, name, description = "" }) {
+  const query = `
+    mutation($name: String!, $description: String) {
+      createUserList(input: { name: $name, description: $description }) {
+        list {
+          id
+          name
+        }
+      }
+    }
+  `;
+  const data = await fetchGraphQL(token, query, { name, description });
+  return data?.createUserList?.list;
+}
+
+async function updateUserList({ token, listNodeId, name }) {
+  const query = `
+    mutation($listId: ID!, $name: String!) {
+      updateUserList(input: { listId: $listId, name: $name }) {
+        list {
+          id
+          name
+        }
+      }
+    }
+  `;
+  const data = await fetchGraphQL(token, query, { listId: listNodeId, name });
+  return data?.updateUserList?.list;
+}
+
+async function deleteUserList({ token, listNodeId }) {
+  const query = `
+    mutation($listId: ID!) {
+      deleteUserList(input: { listId: $listId }) {
+        clientMutationId
+      }
+    }
+  `;
+  await fetchGraphQL(token, query, { listId: listNodeId });
+}
+
+window.GitHubApi = {
+  fetchAllStarred,
+  starRepository,
+  unstarRepository,
+  updateRepositoryLists,
+  createUserList,
+  updateUserList,
+  deleteUserList
+};

@@ -423,6 +423,349 @@ async function bootstrap() {
       }
     });
 
+    async function executeBatchAddToList(repoIds, targetListName, targetListId, targetAccountId) {
+      if (!repoIds || !repoIds.length) return;
+      const state = store.getState();
+      const reposByAccount = {};
+      const updatedRepos = state.repos.map(repo => {
+        if (repoIds.includes(repo.id)) {
+          if (!reposByAccount[repo.sourceAccount]) reposByAccount[repo.sourceAccount] = [];
+          reposByAccount[repo.sourceAccount].push(repo);
+          const lists = repo.lists || [];
+          if (targetListName && !lists.includes(targetListName)) {
+            return { ...repo, lists: [...lists, targetListName] };
+          }
+        }
+        return repo;
+      });
+
+      store.patch({ repos: updatedRepos });
+      const promises = [];
+      for (const [accountId, repos] of Object.entries(reposByAccount)) {
+        const account = state.accounts[accountId];
+        const token = (account?.token || "").trim();
+        if (!token) continue;
+
+        let listNodeId = targetListId;
+        if (accountId !== targetAccountId) {
+          const matchedList = account.lists?.find(l => l.name === targetListName);
+          listNodeId = matchedList?.id || "";
+        }
+
+        if (!listNodeId) {
+          try {
+            const newList = await GitHubApi.createUserList({ token, name: targetListName });
+            if (newList && newList.id) {
+              listNodeId = newList.id;
+              const updatedAccountLists = [...(account.lists || []), newList];
+              store.patchAccount(accountId, { lists: updatedAccountLists });
+            }
+          } catch (err) {
+            console.error(`Failed to create list '${targetListName}' in account ${accountId}:`, err);
+            continue;
+          }
+        }
+
+        for (const repo of repos) {
+          if (!repo.nodeId) continue;
+          const otherListNames = (repo.lists || []).filter(name => name !== targetListName);
+          const listNodeIds = [listNodeId];
+          for (const name of otherListNames) {
+            const matched = account.lists?.find(l => l.name === name);
+            if (matched && matched.id) {
+              listNodeIds.push(matched.id);
+            }
+          }
+          promises.push(
+            GitHubApi.updateRepositoryLists({
+              token,
+              repositoryNodeId: repo.nodeId,
+              listNodeIds
+            }).catch(err => console.error(`Failed to update lists for repo ${repo.fullName}:`, err))
+          );
+        }
+      }
+
+      await Promise.all(promises);
+      store.clearRepoSelection();
+      store.patch({ error: "批量归类成功！" });
+      setTimeout(() => store.patch({ error: "" }), 3000);
+      SecurityStore.saveCache({
+        repos: store.getState().repos,
+        accounts: store.getState().accounts,
+        accountOrder: store.getState().accountOrder,
+        lastUpdatedAt: Date.now()
+      });
+      view.render(store.getState());
+    }
+
+    document.getElementById("list").addEventListener("click", (e) => {
+      const checkbox = e.target.closest(".repo-checkbox");
+      if (checkbox) {
+        store.toggleRepoSelection(checkbox.dataset.id);
+      }
+    });
+
+    document.getElementById("list").addEventListener("dragstart", (e) => {
+      const card = e.target.closest(".repo-card");
+      if (!card) return;
+      const repoId = card.dataset.id;
+      const state = store.getState();
+      if (!state.selectedRepoIds.includes(repoId)) {
+        store.patch({ selectedRepoIds: [repoId] });
+      }
+      e.dataTransfer.setData("text/plain", JSON.stringify(store.getState().selectedRepoIds));
+      e.dataTransfer.effectAllowed = "move";
+      document.querySelectorAll(".github-list-btn").forEach(btn => {
+        if (btn.dataset.list !== undefined && btn.dataset.list !== "unclassified") {
+          btn.classList.add("drop-target-active");
+        }
+      });
+    });
+
+    document.getElementById("list").addEventListener("dragend", (e) => {
+      document.querySelectorAll(".github-list-btn").forEach(btn => {
+        btn.classList.remove("drop-target-active", "drag-over");
+      });
+    });
+
+    const listsContainer = document.getElementById("githubListsContainer");
+    listsContainer.addEventListener("dragover", (e) => {
+      const btn = e.target.closest(".github-list-btn");
+      if (btn && btn.dataset.list !== undefined && btn.dataset.list !== "unclassified") {
+        e.preventDefault();
+      }
+    });
+
+    listsContainer.addEventListener("dragenter", (e) => {
+      const btn = e.target.closest(".github-list-btn");
+      if (btn && btn.dataset.list !== undefined && btn.dataset.list !== "unclassified") {
+        btn.classList.add("drag-over");
+      }
+    });
+
+    listsContainer.addEventListener("dragleave", (e) => {
+      const btn = e.target.closest(".github-list-btn");
+      if (btn) {
+        btn.classList.remove("drag-over");
+      }
+    });
+
+    listsContainer.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      const btn = e.target.closest(".github-list-btn");
+      if (!btn || btn.dataset.list === undefined || btn.dataset.list === "unclassified") return;
+      btn.classList.remove("drag-over");
+      const targetListName = btn.dataset.list;
+      const targetListId = btn.dataset.id;
+      const targetAccountId = btn.dataset.account;
+      try {
+        const repoIds = JSON.parse(e.dataTransfer.getData("text/plain"));
+        await executeBatchAddToList(repoIds, targetListName, targetListId, targetAccountId);
+      } catch (err) {
+        console.error("Drop handling failed:", err);
+      }
+    });
+
+    document.getElementById("batchClearBtn").addEventListener("click", () => {
+      store.clearRepoSelection();
+    });
+
+    document.getElementById("batchUnstarBtn").addEventListener("click", async () => {
+      const state = store.getState();
+      const selectedIds = state.selectedRepoIds;
+      if (!selectedIds.length) return;
+      if (!confirm(`确定要取消 Star 选中的 ${selectedIds.length} 个仓库吗？`)) return;
+
+      const remainingRepos = state.repos.filter(repo => !selectedIds.includes(repo.id));
+      store.patch({ repos: remainingRepos });
+      store.clearRepoSelection();
+
+      const promises = [];
+      for (const id of selectedIds) {
+        const repo = state.repos.find(r => r.id === id);
+        if (!repo) continue;
+        const account = state.accounts[repo.sourceAccount];
+        const token = (account?.token || "").trim();
+        if (!token) continue;
+        promises.push(
+          GitHubApi.unstarRepository({
+            token,
+            owner: repo.owner,
+            repo: repo.name
+          }).catch(err => console.error(`Unstar failed for ${repo.fullName}:`, err))
+        );
+      }
+
+      await Promise.all(promises);
+      store.patch({ error: "批量取消 Star 成功！" });
+      setTimeout(() => store.patch({ error: "" }), 3000);
+      SecurityStore.saveCache({
+        repos: store.getState().repos,
+        accounts: store.getState().accounts,
+        accountOrder: store.getState().accountOrder,
+        lastUpdatedAt: Date.now()
+      });
+      view.render(store.getState());
+    });
+
+    document.getElementById("batchListSelect").addEventListener("change", async (e) => {
+      const targetListName = e.target.value;
+      if (!targetListName) return;
+      const state = store.getState();
+      const selectedIds = [...state.selectedRepoIds];
+      e.target.value = "";
+      let targetListId = "";
+      let targetAccountId = "";
+      for (const accountId of state.accountOrder) {
+        const account = state.accounts[accountId];
+        const matched = account?.lists?.find(l => l.name === targetListName);
+        if (matched) {
+          targetListId = matched.id;
+          targetAccountId = accountId;
+          break;
+        }
+      }
+      await executeBatchAddToList(selectedIds, targetListName, targetListId, targetAccountId);
+    });
+
+    listsContainer.addEventListener("click", async (e) => {
+      const addBtn = e.target.closest("#addNewListBtn");
+      if (addBtn) {
+        const name = prompt("请输入新建 List 的名称：");
+        if (!name || !name.trim()) return;
+        const state = store.getState();
+        const promises = [];
+        for (const accountId of state.accountOrder) {
+          const account = state.accounts[accountId];
+          const token = (account?.token || "").trim();
+          if (!token) continue;
+          promises.push(
+            GitHubApi.createUserList({ token, name: name.trim() })
+              .then(newList => {
+                if (newList) {
+                  const updatedLists = [...(account.lists || []), newList];
+                  store.patchAccount(accountId, { lists: updatedLists });
+                }
+              })
+              .catch(err => console.error(`Create list failed for ${accountId}:`, err))
+          );
+        }
+        await Promise.all(promises);
+        store.patch({ error: `List “${name}” 创建成功！` });
+        setTimeout(() => store.patch({ error: "" }), 3000);
+        view.render(store.getState());
+        return;
+      }
+
+      const editBtn = e.target.closest(".list-action-btn.edit");
+      if (editBtn) {
+        e.stopPropagation();
+        const listNodeId = editBtn.dataset.id;
+        const accountId = editBtn.dataset.account;
+        const oldName = editBtn.dataset.name;
+        const newName = prompt(`请输入 List “${oldName}” 的新名称：`, oldName);
+        if (!newName || !newName.trim() || newName.trim() === oldName) return;
+
+        const state = store.getState();
+        const updatedRepos = state.repos.map(repo => {
+          if (repo.lists && repo.lists.includes(oldName)) {
+            const listArr = repo.lists.map(name => name === oldName ? newName.trim() : name);
+            return { ...repo, lists: listArr };
+          }
+          return repo;
+        });
+
+        for (const actId of state.accountOrder) {
+          const act = state.accounts[actId];
+          if (act.lists) {
+            const updatedLists = act.lists.map(l => {
+              if (l.name === oldName) return { ...l, name: newName.trim() };
+              return l;
+            });
+            store.patchAccount(actId, { lists: updatedLists });
+          }
+        }
+
+        store.patch({ repos: updatedRepos });
+        const promises = [];
+        for (const actId of state.accountOrder) {
+          const act = state.accounts[actId];
+          const token = (act?.token || "").trim();
+          if (!token) continue;
+          
+          const matched = act.lists?.find(l => l.name === oldName);
+          if (matched && matched.id) {
+            promises.push(
+              GitHubApi.updateUserList({
+                token,
+                listNodeId: matched.id,
+                name: newName.trim()
+              }).catch(err => console.error(`Rename failed for list in ${actId}:`, err))
+            );
+          }
+        }
+
+        await Promise.all(promises);
+        store.patch({ error: "重命名成功！" });
+        setTimeout(() => store.patch({ error: "" }), 3000);
+        SecurityStore.saveCache({
+          repos: store.getState().repos,
+          accounts: store.getState().accounts,
+          accountOrder: store.getState().accountOrder,
+          lastUpdatedAt: Date.now()
+        });
+        view.render(store.getState());
+        return;
+      }
+
+      const deleteBtn = e.target.closest(".list-action-btn.delete");
+      if (deleteBtn) {
+        e.stopPropagation();
+        const oldName = deleteBtn.dataset.name;
+        if (!confirm(`确定要删除 List “${oldName}” 吗？\n注意：这会同步删除您 GitHub 账号中的该自定义 List。`)) return;
+
+        const state = store.getState();
+        const updatedRepos = state.repos.map(repo => {
+          if (repo.lists) {
+            return { ...repo, lists: repo.lists.filter(name => name !== oldName) };
+          }
+          return repo;
+        });
+
+        const promises = [];
+        for (const accountId of state.accountOrder) {
+          const account = state.accounts[accountId];
+          const token = (account?.token || "").trim();
+          if (!token) continue;
+          const matched = account.lists?.find(l => l.name === oldName);
+          if (matched && matched.id) {
+            promises.push(
+              GitHubApi.deleteUserList({
+                token,
+                listNodeId: matched.id
+              }).catch(err => console.error(`Delete list failed for ${accountId}:`, err))
+            );
+            const updatedLists = account.lists.filter(l => l.name !== oldName);
+            store.patchAccount(accountId, { lists: updatedLists });
+          }
+        }
+
+        store.patch({ repos: updatedRepos });
+        await Promise.all(promises);
+        store.patch({ error: "删除 List 成功！" });
+        setTimeout(() => store.patch({ error: "" }), 3000);
+        SecurityStore.saveCache({
+          repos: store.getState().repos,
+          accounts: store.getState().accounts,
+          accountOrder: store.getState().accountOrder,
+          lastUpdatedAt: Date.now()
+        });
+        view.render(store.getState());
+        return;
+      }
+    });
+
     window.addEventListener("keydown", (e) => {
       if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
       const activeTag = document.activeElement?.tagName;
@@ -439,7 +782,7 @@ async function bootstrap() {
     if (cache.accounts) {
       for (const accountId of store.getState().accountOrder) {
         const v = cache.accounts[accountId];
-        if (v) store.patchAccount(accountId, { repos: v.repos || [], etag: v.etag || "" });
+        if (v) store.patchAccount(accountId, { repos: v.repos || [], etag: v.etag || "", lists: v.lists || [] });
       }
     }
   }
