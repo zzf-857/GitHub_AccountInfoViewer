@@ -173,20 +173,38 @@ class APIProxyHandler(SimpleHTTPRequestHandler):
             send_status("正在获取 GitHub README...")
             
             # 1. Fetch README
-            headers = {"Accept": "application/vnd.github.v3.raw"}
+            headers = {
+                "Accept": "application/vnd.github.v3.raw",
+                "User-Agent": "StarredIntelligence/1.0 (OpenSource Insight App)"
+            }
             if GITHUB_TOKEN:
                 headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
                 
             readme_url = f"https://api.github.com/repos/{owner}/{repo}/readme"
+            readme_content = ""
             try:
                 readme_resp = requests.get(readme_url, headers=headers, timeout=10)
                 if readme_resp.status_code == 200:
                     readme_content = readme_resp.text[:4000]
-                elif readme_resp.status_code == 404:
-                    readme_content = "该仓库没有 README。"
                 else:
-                    readme_content = f"获取 README 失败 (HTTP {readme_resp.status_code})。"
+                    log(f"[README] GitHub API failed: {readme_resp.status_code}. Trying raw.githubusercontent fallback...")
+                    # Fallback 1: raw main
+                    raw_url_main = f"https://raw.githubusercontent.com/{owner}/{repo}/main/README.md"
+                    raw_resp = requests.get(raw_url_main, headers={"User-Agent": headers["User-Agent"]}, timeout=8)
+                    if raw_resp.status_code == 200:
+                        readme_content = raw_resp.text[:4000]
+                        log("[README] Successfully retrieved README from raw main fallback.")
+                    else:
+                        # Fallback 2: raw master
+                        raw_url_master = f"https://raw.githubusercontent.com/{owner}/{repo}/master/README.md"
+                        raw_resp = requests.get(raw_url_master, headers={"User-Agent": headers["User-Agent"]}, timeout=8)
+                        if raw_resp.status_code == 200:
+                            readme_content = raw_resp.text[:4000]
+                            log("[README] Successfully retrieved README from raw master fallback.")
+                        else:
+                            readme_content = f"获取 README 失败 (GitHub API HTTP {readme_resp.status_code}，旁路下载亦未成功)。"
             except Exception as e:
+                log(f"[README] Network error: {e}")
                 readme_content = "请求 README 时发生网络错误。"
 
             # 2. Web Search
@@ -216,7 +234,7 @@ class APIProxyHandler(SimpleHTTPRequestHandler):
 2. 第二段，大标题：# 核心功能与使用场景
 （列举 2-3 个核心功能或优势。并且结合搜索结果或README，想一个它可以用来干什么,说一个具体的、典型的真实使用场景或用法。解决了什么问题。）
 3. 语言简练，总字数500-1500字，直接输出内容，不要任何寒暄。
-4. 【重要】如果 README 内容显示获取失败或为空，且仅靠简介和搜索结果依然无法判断该项目真实用途时，请坦诚回答"提供的上下文不足，无法准确解读该仓库"，严禁根据仓库名字自行编造或猜测功能。
+4. 【重要】若获取 README 失败或无 README，但拥有“全网对于该开源仓库的讨论与介绍摘要”，请结合简介和这些全网搜索到的第三方讨论、评论与介绍信息，进行积极、客观的解读，无需直接拒绝。只有当 README 缺失、全网搜索也无相关结果，且仅靠简介完全无法判断其真实用途时，才回答"提供的上下文不足，无法准确解读该仓库"。
 
 仓库名：{owner}/{repo}
 简介：{description}
