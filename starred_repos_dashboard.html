@@ -174,16 +174,16 @@
         
         <!-- 头像与账号切换 Dropdown 容器 -->
         <div class="relative" id="accountMenuContainer">
-          <button id="accountAvatarBtn" class="w-9 h-9 rounded-full border border-primary/30 p-0.5 hover:border-primary transition-colors overflow-hidden select-none outline-none focus:outline-none flex items-center justify-center">
-            <img id="userAvatarImg" class="w-full h-full rounded-full object-cover" alt="User Profile" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 24 24' fill='none' stroke='%234edea3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='4'/><path d='M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94'/></svg>"/>
+          <button id="accountAvatarBtn" class="w-11 h-11 rounded-full border border-primary/30 p-0.5 hover:border-primary transition-colors overflow-hidden select-none outline-none focus:outline-none flex items-center justify-center">
+            <img id="userAvatarImg" class="w-full h-full rounded-full object-cover" alt="User Profile" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='36' height='36' fill='none'><circle cx='12' cy='12' r='11' fill='rgba(78,222,163,0.15)' stroke='%234edea3' stroke-width='1.5'/><path d='M12 6L6 9l6 3 6-3-6-3zM6 14l6 3 6-3M6 11l6 3 6-3' stroke='%234edea3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>"/>
           </button>
           
           <!-- 悬浮账号选择下拉菜单 -->
-          <div id="accountDropdownMenu" class="absolute right-0 mt-2.5 w-56 glass-panel rounded-xl shadow-2xl p-2.5 z-[100] transition-all duration-200 origin-top-right transform scale-95 opacity-0 pointer-events-none">
-            <div class="text-[10px] font-bold tracking-widest text-on-surface-variant/50 uppercase px-2.5 py-1.5 mb-1.5 border-b border-white/5 select-none">
+          <div id="accountDropdownMenu" class="absolute right-0 mt-2.5 w-64 glass-panel rounded-xl shadow-2xl p-3 z-[100] transition-all duration-200 origin-top-right transform scale-95 opacity-0 pointer-events-none">
+            <div class="text-[11px] font-bold tracking-widest text-on-surface-variant/60 uppercase px-3 py-2 mb-2 border-b border-white/5 select-none">
               切换数据源
             </div>
-            <div class="flex flex-col gap-1" id="accountDropdownList">
+            <div class="flex flex-col gap-1.5" id="accountDropdownList">
               <!-- 动态注入账号项和合并项 -->
             </div>
           </div>
