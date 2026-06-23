@@ -140,6 +140,56 @@
       z-index: 40;
     }
 
+    /* Switch Toggle Component Style */
+    .switch-toggle {
+      position: relative;
+      display: inline-block;
+      width: 32px;
+      height: 18px;
+    }
+
+    .switch-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .switch-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 9px;
+      transition: .2s;
+    }
+
+    .switch-slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 2px;
+      bottom: 2px;
+      background-color: #94a3b8;
+      border-radius: 50%;
+      transition: .2s;
+    }
+
+    .switch-toggle input:checked + .switch-slider {
+      background-color: rgba(78, 222, 163, 0.2);
+      border-color: rgba(78, 222, 163, 0.3);
+    }
+
+    .switch-toggle input:checked + .switch-slider:before {
+      transform: translateX(14px);
+      background-color: var(--neon-green);
+      box-shadow: 0 0 6px rgba(78, 222, 163, 0.4);
+    }
+
     /* Custom Scrollbar */
     ::-webkit-scrollbar {
       width: 6px;
@@ -238,11 +288,11 @@
       <div class="flex items-center gap-4.5" id="liveStatus">
         <span>最近更新: --:--:--</span>
         <span class="text-white/10">|</span>
-        <span class="text-secondary flex items-center gap-2">
+        <span class="text-secondary flex items-center gap-2 select-none">
           自动刷新: 
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="autoRefreshToggle" class="sr-only peer" checked />
-            <div class="w-8 h-4.5 bg-white/10 rounded-full border border-white/5 transition-colors peer-checked:bg-secondary/20 peer-focus:outline-none after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:after:translate-x-3.5 peer-checked:after:bg-secondary"></div>
+          <label class="switch-toggle">
+            <input type="checkbox" id="autoRefreshToggle" checked />
+            <span class="switch-slider"></span>
           </label>
         </span>
         <span>下次刷新: --:--</span>
@@ -356,7 +406,7 @@
 
     <!-- Insights Visualizations -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-      <div class="glass-panel p-6 rounded-2xl h-80 lg:col-span-2">
+      <div class="glass-panel p-6 rounded-2xl h-80 flex flex-col">
         <div class="flex justify-between items-center mb-4">
           <div class="flex items-center gap-2">
             <h4 class="font-headline-md text-base font-semibold">语言占比洞察</h4>
@@ -364,7 +414,7 @@
           </div>
           <span class="font-label-mono text-[11px] text-on-surface-variant" id="languageInsight">加载中...</span>
         </div>
-        <div class="w-full h-56" id="languageChart"></div>
+        <div class="w-full flex-1" id="languageChart"></div>
       </div>
       <div class="glass-panel p-6 rounded-2xl h-80 flex flex-col">
         <div class="flex justify-between items-center mb-3">
@@ -375,12 +425,12 @@
           <!-- JS 动态注入热门主题条形图 -->
         </div>
       </div>
-      <div class="glass-panel p-6 rounded-2xl h-80 lg:col-span-3">
+      <div class="glass-panel p-6 rounded-2xl h-80 flex flex-col">
         <div class="flex justify-between items-center mb-4">
           <h4 class="font-headline-md text-base font-semibold">月度活跃分布</h4>
           <span class="px-2 py-0.5 bg-secondary/10 text-secondary text-[10px] rounded font-label-mono">Activity</span>
         </div>
-        <div class="w-full h-56" id="activityChart"></div>
+        <div class="w-full flex-1" id="activityChart"></div>
       </div>
     </div>
 
