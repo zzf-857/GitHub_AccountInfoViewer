@@ -403,16 +403,16 @@ function createView() {
       html.push(`
         <div class="github-list-btn-wrap group relative w-full">
           <button class="github-list-btn flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${active} w-full text-left" data-list="${escapeHtml(item.name)}" data-id="${nodeId}" data-account="${accountId}">
-            <span class="flex items-center gap-2.5 truncate max-w-[130px]" title="${escapeHtml(item.name)}">
+            <span class="flex items-center gap-2.5 truncate max-w-[120px]" title="${escapeHtml(item.name)}">
               <span class="material-symbols-outlined text-base">folder_special</span>
               <span class="truncate">${escapeHtml(item.name)}</span>
             </span>
             <span class="flex items-center gap-1.5 ml-auto">
-              <span class="bg-black/25 px-2 py-0.5 rounded-full text-[10px] border border-white/5 font-label-mono group-hover:opacity-0 transition-opacity">${item.value}</span>
+              <span class="bg-black/25 px-2 py-0.5 rounded-full text-[10px] border border-white/5 font-label-mono">${item.value}</span>
             </span>
           </button>
           ${nodeId ? `
-            <div class="absolute right-2 top-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="absolute right-[42px] top-[6px] flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button class="list-action-btn edit text-on-surface-variant hover:text-primary p-0.5 rounded bg-black/30 hover:bg-black/50" data-id="${nodeId}" data-account="${accountId}" data-name="${escapeHtml(item.name)}" title="重命名 List">
                 <span class="material-symbols-outlined text-[14px]">edit</span>
               </button>
