@@ -223,6 +223,10 @@ function createView() {
     if (filters.status) labels.push(["status", filters.status === "active" ? "活跃仓库" : "已归档"]);
     if (filters.starRange) labels.push(["starRange", `${filters.starRange} stars`]);
     if (filters.updatedRange) labels.push(["updatedRange", `更新：${filters.updatedRange}`]);
+    if (filters.list) {
+      const listLabel = filters.list === "unclassified" ? "未分类" : `List: ${filters.list}`;
+      labels.push(["list", listLabel]);
+    }
     document.getElementById("filterChips").innerHTML = labels.map(([key, label]) =>
       `<button class="filter-chip" data-filter-key="${key}" title="移除此筛选">${escapeHtml(label)} ×</button>`
     ).join("");
@@ -256,6 +260,48 @@ function createView() {
     if (sortOrderEl) sortOrderEl.value = state.sorting?.order || "desc";
   }
 
+  function renderGitHubLists(state) {
+    const repos = sourceRepos(state);
+    const stats = DashboardInsights.buildListStats(repos);
+    const container = document.getElementById("githubListsContainer");
+    if (!container) return;
+
+    const currentList = state.filters.list || "";
+
+    const html = [];
+    
+    // 1. 全部 (All)
+    const allActive = currentList === "" ? "active" : "";
+    html.push(`
+      <button class="github-list-btn ${allActive}" data-list="">
+        <span>全部 (All)</span>
+        <span class="list-count">${stats.all}</span>
+      </button>
+    `);
+
+    // 2. 自定义 Lists
+    for (const item of stats.lists) {
+      const active = currentList === item.name ? "active" : "";
+      html.push(`
+        <button class="github-list-btn ${active}" data-list="${escapeHtml(item.name)}">
+          <span>${escapeHtml(item.name)}</span>
+          <span class="list-count">${item.value}</span>
+        </button>
+      `);
+    }
+
+    // 3. 未分类 (Unclassified)
+    const uncActive = currentList === "unclassified" ? "active" : "";
+    html.push(`
+      <button class="github-list-btn ${uncActive}" data-list="unclassified">
+        <span>未分类 (Unclassified)</span>
+        <span class="list-count">${stats.unclassified}</span>
+      </button>
+    `);
+
+    container.innerHTML = html.join("");
+  }
+
   function renderList(state, filtered) {
     document.getElementById("resultCount").textContent = `${filtered.length} 项`;
     const emptyState = document.getElementById("emptyState");
@@ -273,6 +319,7 @@ function createView() {
     list.innerHTML = filtered.map((repo) => {
       const [owner = repo.owner || "", name = repo.name || repo.repo || ""] = (repo.fullName || repo.repo || "").split("/");
       const topics = (repo.topics || []).slice(0, 5);
+      const repoLists = repo.lists || [];
       const descriptionKind = DashboardInsights.getDescriptionKind(repo);
       return `
         <article class="repo-card ${expandZh ? "expanded" : ""}">
@@ -281,6 +328,7 @@ function createView() {
             <p class="repo-desc">${escapeHtml(repo.description || "暂无简介")}</p>
             ${descriptionKind === "en" ? `<div class="repo-desc-cn"><strong>自动解读：</strong>${escapeHtml(DashboardInsights.zhAuto(repo.description))}</div>` : ""}
             <div class="repo-topics">
+              ${repoLists.map((listName) => `<span class="repo-list-tag">${escapeHtml(listName)}</span>`).join("")}
               ${topics.map((topic) => `<span class="repo-topic">${escapeHtml(topic)}</span>`).join("")}
               ${descriptionKind === "empty" ? '<span class="repo-topic">暂无简介</span>' : ""}
             </div>
@@ -305,6 +353,7 @@ function createView() {
     renderTopicPanel(filtered);
     renderFilterChips(state);
     renderStatus(state, filtered);
+    renderGitHubLists(state);
     renderList(state, filtered);
   }
 

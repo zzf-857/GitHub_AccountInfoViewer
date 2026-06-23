@@ -1,6 +1,6 @@
 const defaultState = {
   activeSource: "merged",
-  filters: { keyword: "", language: "", descType: "", topic: "", status: "", starRange: "", updatedRange: "" },
+  filters: { keyword: "", language: "", descType: "", topic: "", status: "", starRange: "", updatedRange: "", list: "" },
   sorting: { by: "updatedAt", order: "desc" },
   accounts: {},
   accountOrder: [],

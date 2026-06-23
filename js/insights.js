@@ -126,6 +126,13 @@ function filterRepositories(repos, filters = {}, now = Date.now()) {
     if (!topicMatches(repo.topics, filters.topic)) return false;
     if (!matchesStarRange(repo, filters.starRange)) return false;
     if (!matchesUpdatedRange(repo, filters.updatedRange, now)) return false;
+    if (filters.list) {
+      if (filters.list === "unclassified") {
+        if (repo.lists && repo.lists.length > 0) return false;
+      } else {
+        if (!repo.lists || !repo.lists.includes(filters.list)) return false;
+      }
+    }
     if (!keyword) return true;
     const searchable = [
       repo.repo,
@@ -151,6 +158,13 @@ function buildResultSummary(repos, filters = {}) {
   if (filters.updatedRange === "month") parts.push("最近一月更新");
   if (filters.updatedRange === "quarter") parts.push("最近三月更新");
   if (filters.updatedRange === "year") parts.push("最近一年更新");
+  if (filters.list) {
+    if (filters.list === "unclassified") {
+      parts.push("未分类仓库");
+    } else {
+      parts.push(`List: ${filters.list}`);
+    }
+  }
 
   let sentence = `匹配到 ${count} 个仓库。`;
   if (parts.length) sentence += `当前聚焦 ${parts.join("、")}`;
@@ -210,9 +224,33 @@ function getMonthlyActivity(repos) {
     .map(([name, value]) => ({ name, value }));
 }
 
+function buildListStats(repos) {
+  const counts = new Map();
+  let unclassifiedCount = 0;
+  for (const repo of repos) {
+    if (repo.lists && repo.lists.length > 0) {
+      for (const listName of repo.lists) {
+        counts.set(listName, (counts.get(listName) || 0) + 1);
+      }
+    } else {
+      unclassifiedCount++;
+    }
+  }
+  const listStats = [...counts.entries()]
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
+
+  return {
+    lists: listStats,
+    unclassified: unclassifiedCount,
+    all: repos.length
+  };
+}
+
 const api = {
   buildLanguageStats,
   buildTopicStats,
+  buildListStats,
   buildInsightCards,
   buildResultSummary,
   filterRepositories,

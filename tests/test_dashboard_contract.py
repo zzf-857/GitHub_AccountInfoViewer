@@ -10,7 +10,7 @@ HTML = (ROOT / "starred_repos_dashboard.html").read_text(encoding="utf-8")
 class DashboardContractTest(unittest.TestCase):
     def test_dashboard_uses_large_readability_tokens(self):
         required_tokens = {
-            "--font-page-title": "30px",
+            "--font-page-title": "32px",
             "--font-section-title": "20px",
             "--font-body": "16px",
             "--font-repo-title": "17px",
@@ -23,10 +23,10 @@ class DashboardContractTest(unittest.TestCase):
     def test_dashboard_has_insight_console_structure(self):
         required_ids = [
             "globalSearch",
-            "savedViews",
+            "githubListsContainer",
             "filterChips",
             "activeFilterSummary",
-            "insightSummary",
+            "languageInsight",
             "languageChart",
             "topicPanel",
             "activityChart",

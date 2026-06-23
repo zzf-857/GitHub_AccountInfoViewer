@@ -149,11 +149,68 @@
       margin-top: 18px;
     }
 
-    .saved-views {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+    .github-lists-container {
+      display: flex;
+      flex-direction: column;
       gap: 8px;
       margin-top: 8px;
+    }
+
+    .github-list-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      min-height: 48px;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--text);
+      background: var(--surface-raised);
+      font-size: 15px;
+      line-height: 22px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    .github-list-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+    }
+
+    .github-list-btn.active {
+      background: rgba(0, 240, 255, 0.1);
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+      font-weight: 600;
+    }
+
+    .github-list-btn .list-count {
+      font-size: 13px;
+      color: var(--muted);
+      background: var(--surface);
+      padding: 2px 8px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+    }
+
+    .github-list-btn.active .list-count {
+      color: var(--neon-cyan);
+      border-color: rgba(0, 240, 255, 0.3);
+      background: rgba(0, 240, 255, 0.15);
+    }
+
+    .repo-list-tag {
+      padding: 2px 8px;
+      border: 1px solid rgba(184, 42, 255, 0.4);
+      border-radius: 4px;
+      color: #d880ff;
+      background: rgba(184, 42, 255, 0.1);
+      font-size: var(--font-tag);
+      line-height: 18px;
+      font-weight: 500;
     }
 
     .filter-grid {
@@ -183,13 +240,6 @@
       height: 18px;
       accent-color: var(--accent);
       cursor: pointer;
-    }
-
-    .saved-view {
-      min-height: 38px;
-      text-align: left;
-      color: var(--muted);
-      background: transparent;
     }
 
     .main {
@@ -1026,14 +1076,9 @@
       </div>
 
       <div class="field">
-        <label class="label">快捷视图</label>
-        <div class="saved-views" id="savedViews">
-          <button class="saved-view" data-view="All">All</button>
-          <button class="saved-view" data-view="AI/LLM">AI / LLM</button>
-          <button class="saved-view" data-view="Frontend">Frontend</button>
-          <button class="saved-view" data-view="DevTools">DevTools</button>
-          <button class="saved-view" data-view="Data">Data</button>
-          <button class="saved-view" data-view="Recently Starred">Recently Starred</button>
+        <label class="label">GitHub Lists 分类</label>
+        <div class="github-lists-container" id="githubListsContainer">
+          <!-- JS 会动态渲染 List 分类按钮 -->
         </div>
       </div>
 

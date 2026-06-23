@@ -234,13 +234,10 @@ async function bootstrap() {
       view.setExpandZh(false);
       view.render(store.getState());
     });
-    document.getElementById("savedViews").addEventListener("click", (e) => {
-      const button = e.target.closest("[data-view]");
+    document.getElementById("githubListsContainer").addEventListener("click", (e) => {
+      const button = e.target.closest("[data-list]");
       if (!button) return;
-      const base = { keyword: "", language: "", descType: "", topic: "", status: "", starRange: "", updatedRange: "" };
-      const nextFilters = { ...base, ...DashboardInsights.getSavedViewFilter(button.dataset.view) };
-      store.setFilters(nextFilters);
-      syncFilterControls(store.getState().filters);
+      store.setFilters({ list: button.dataset.list });
     });
     document.getElementById("filterChips").addEventListener("click", (e) => {
       const button = e.target.closest("[data-filter-key]");
@@ -249,7 +246,7 @@ async function bootstrap() {
       syncFilterControls(store.getState().filters);
     });
     document.getElementById("resetFilters").addEventListener("click", () => {
-      store.setFilters({ keyword: "", language: "", descType: "", topic: "", status: "", starRange: "", updatedRange: "" });
+      store.setFilters({ keyword: "", language: "", descType: "", topic: "", status: "", starRange: "", updatedRange: "", list: "" });
       syncFilterControls(store.getState().filters);
     });
     

@@ -5,7 +5,8 @@ const {
   buildInsightCards,
   buildResultSummary,
   filterRepositories,
-  getSavedViewFilter
+  getSavedViewFilter,
+  buildListStats
 } = require("../../js/insights.js");
 
 const repos = [
@@ -81,6 +82,29 @@ assert.equal(
     updatedRange: "year"
   }),
   "匹配到 1 个仓库。当前聚焦 Python、ai、活跃仓库、1000+ stars、最近一年更新，并包含关键词“agent”。"
+);
+
+const reposWithLists = [
+  { fullName: "a/b", lists: ["Unity"] },
+  { fullName: "c/d", lists: ["Unity", "Web3"] },
+  { fullName: "e/f", lists: [] }
+];
+
+const listStats = buildListStats(reposWithLists);
+assert.deepEqual(listStats.lists, [
+  { name: "Unity", value: 2 },
+  { name: "Web3", value: 1 }
+]);
+assert.equal(listStats.unclassified, 1);
+assert.equal(listStats.all, 3);
+
+assert.deepEqual(
+  filterRepositories(reposWithLists, { list: "Unity" }).map(r => r.fullName),
+  ["a/b", "c/d"]
+);
+assert.deepEqual(
+  filterRepositories(reposWithLists, { list: "unclassified" }).map(r => r.fullName),
+  ["e/f"]
 );
 
 console.log("insights tests passed");
