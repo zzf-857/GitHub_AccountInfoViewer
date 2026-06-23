@@ -295,12 +295,16 @@ function createView() {
     if (liveStatus) {
       liveStatus.innerHTML = `
         <span>最近更新: ${formatTime(state.lastUpdatedAt)}</span>
-        <span class="text-secondary flex items-center gap-1 select-none">
+        <span class="text-white/10">|</span>
+        <span class="text-secondary flex items-center gap-2 select-none">
           自动刷新: 
-          <input type="checkbox" id="autoRefreshToggle" class="rounded w-3.5 h-3.5 bg-transparent border-white/30 text-secondary focus:ring-secondary cursor-pointer" ${state.autoRefreshEnabled ? "checked" : ""} />
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="autoRefreshToggle" class="sr-only peer" ${state.autoRefreshEnabled ? "checked" : ""} />
+            <div class="w-8 h-4.5 bg-white/10 rounded-full border border-white/5 transition-colors peer-checked:bg-secondary/20 peer-focus:outline-none after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:after:translate-x-3.5 peer-checked:after:bg-secondary"></div>
+          </label>
         </span>
         <span>下次刷新: ${nextRefreshText}</span>
-        <span class="px-1.5 py-0.5 bg-white/5 rounded">${state.isLoading ? "同步中..." : "空闲"}</span>
+        <span class="px-1.5 py-0.5 bg-white/5 rounded text-[11px]">${state.isLoading ? "同步中..." : "空闲"}</span>
       `;
     }
 
