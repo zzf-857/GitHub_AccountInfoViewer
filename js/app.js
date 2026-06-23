@@ -275,6 +275,7 @@ async function bootstrap() {
     let startY = 0;
     let selectionBox = null;
     let initialSelectedRepoIds = [];
+    let isCtrlActive = false;
     document.getElementById("globalSearch").addEventListener("input", (e) => store.setFilters({ keyword: e.target.value }));
     document.getElementById("lang").addEventListener("change", (e) => store.setFilters({ language: e.target.value }));
     document.getElementById("topicFilter").addEventListener("change", (e) => store.setFilters({ topic: e.target.value }));
@@ -628,50 +629,74 @@ async function bootstrap() {
     }
 
     document.getElementById("list").addEventListener("click", (e) => {
-      const checkbox = e.target.closest(".repo-checkbox");
-      if (checkbox) {
-        const currentId = checkbox.dataset.id;
-        const state = store.getState();
-        
-        if (e.shiftKey && lastCheckedId) {
-          const filtered = view.getFilteredRepos(state);
-          const filteredIds = filtered.map(r => r.id);
-          const fromIdx = filteredIds.indexOf(lastCheckedId);
-          const toIdx = filteredIds.indexOf(currentId);
-          if (fromIdx !== -1 && toIdx !== -1) {
-            const start = Math.min(fromIdx, toIdx);
-            const end = Math.max(fromIdx, toIdx);
-            const rangeIds = filteredIds.slice(start, end + 1);
-            
-            const wasSelected = state.selectedRepoIds.includes(currentId);
-            const targetChecked = !wasSelected;
-            
-            let currentSelected = [...state.selectedRepoIds];
-            if (targetChecked) {
-              for (const id of rangeIds) {
-                if (!currentSelected.includes(id)) {
-                  currentSelected.push(id);
-                }
-              }
-            } else {
-              currentSelected = currentSelected.filter(id => !rangeIds.includes(id));
-            }
-            store.patch({ selectedRepoIds: currentSelected });
-            lastCheckedId = currentId;
-            return;
-          }
+      if (e.target.closest("a, button, input:not(.repo-checkbox)")) {
+        return;
+      }
+      
+      const card = e.target.closest(".repo-card");
+      if (!card) {
+        // 点击列表空白处，且没有按修饰键时，清空选择
+        if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+          store.patch({ selectedRepoIds: [] });
+          lastCheckedId = null;
         }
-        
+        return;
+      }
+      
+      const currentId = card.dataset.id;
+      const state = store.getState();
+      
+      if (e.shiftKey && lastCheckedId) {
+        const filtered = view.getFilteredRepos(state);
+        const filteredIds = filtered.map(r => r.id);
+        const fromIdx = filteredIds.indexOf(lastCheckedId);
+        const toIdx = filteredIds.indexOf(currentId);
+        if (fromIdx !== -1 && toIdx !== -1) {
+          const start = Math.min(fromIdx, toIdx);
+          const end = Math.max(fromIdx, toIdx);
+          const rangeIds = filteredIds.slice(start, end + 1);
+          
+          const wasSelected = state.selectedRepoIds.includes(currentId);
+          const targetChecked = !wasSelected;
+          
+          let currentSelected = [...state.selectedRepoIds];
+          if (targetChecked) {
+            for (const id of rangeIds) {
+              if (!currentSelected.includes(id)) {
+                currentSelected.push(id);
+              }
+            }
+          } else {
+            currentSelected = currentSelected.filter(id => !rangeIds.includes(id));
+          }
+          store.patch({ selectedRepoIds: currentSelected });
+          lastCheckedId = currentId;
+          return;
+        }
+      }
+      
+      const isCheckbox = !!e.target.closest(".repo-checkbox");
+      if (isCheckbox || e.ctrlKey || e.metaKey) {
         store.toggleRepoSelection(currentId);
+        lastCheckedId = currentId;
+        return;
+      }
+      
+      const isAlreadySelected = state.selectedRepoIds.includes(currentId);
+      const isOnlySelected = isAlreadySelected && state.selectedRepoIds.length === 1;
+      
+      if (isOnlySelected) {
+        store.patch({ selectedRepoIds: [] });
+        lastCheckedId = null;
+      } else {
+        store.patch({ selectedRepoIds: [currentId] });
         lastCheckedId = currentId;
       }
     });
 
-    // Ctrl + 鼠标右键 框选逻辑
-    window.addEventListener("contextmenu", (e) => {
-      if (e.ctrlKey) {
-        e.preventDefault();
-      }
+    // 禁用列表区域的浏览器默认右键菜单，防止框选时弹出菜单
+    document.getElementById("list").addEventListener("contextmenu", (e) => {
+      e.preventDefault();
     });
 
     function onMouseMove(e) {
@@ -702,7 +727,8 @@ async function bootstrap() {
         
         const id = card.dataset.id;
         const checkbox = card.querySelector(".repo-checkbox");
-        const shouldBeSelected = initialSelectedRepoIds.includes(id) || intersect;
+        // 如果按住了 Ctrl/Cmd 进行框选，那么在原本选中的基础上进行叠加，否则只有框住的被选中
+        const shouldBeSelected = isCtrlActive ? (initialSelectedRepoIds.includes(id) || intersect) : intersect;
         
         if (shouldBeSelected) {
           card.classList.add("selected");
@@ -738,11 +764,17 @@ async function bootstrap() {
     }
 
     document.getElementById("list").addEventListener("mousedown", (e) => {
-      if (e.button === 2 && e.ctrlKey) {
+      // 避免在卡片内的交互元素（链接、按钮等）上触发右键拖拽框选
+      if (e.target.closest("a, button, input:not(.repo-checkbox)")) {
+        return;
+      }
+      
+      if (e.button === 2) {
         e.preventDefault();
         isSelecting = true;
         startX = e.clientX;
         startY = e.clientY;
+        isCtrlActive = e.ctrlKey || e.metaKey;
         initialSelectedRepoIds = [...store.getState().selectedRepoIds];
         
         selectionBox = document.createElement("div");
