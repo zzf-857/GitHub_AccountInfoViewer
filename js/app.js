@@ -1,3 +1,19 @@
+async function getBase64ImageFromUrl(imageUrl) {
+  try {
+    const res = await fetch(imageUrl);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    console.error("Failed to fetch image as base64:", err);
+    return null;
+  }
+}
+
 function diffRepos(prev, next) {
   const prevSet = new Set(prev.map((r) => r.fullName));
   const nextSet = new Set(next.map((r) => r.fullName));
@@ -110,10 +126,56 @@ async function bootstrap() {
     store.patch({ error: "未在 .env 中读取到有效账号，请配置 ACCOUNT_<N>_NAME / TOKEN。" });
   }
   store.setAccounts(envAccounts);
+  // 从本地存储恢复各账号头像缓存
+  for (const accountId of store.getState().accountOrder) {
+    const cached = localStorage.getItem(`avatar_cache_${accountId}`);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.base64) {
+          store.patchAccount(accountId, { avatarUrl: parsed.avatarUrl, localAvatarBase64: parsed.base64 });
+        }
+      } catch (_) {}
+    }
+  }
   renderSourceOptions(store.getState());
   const sourceInfo = document.getElementById("sourceInfo");
   if (sourceInfo) {
     sourceInfo.textContent = `已从 .env 读取 ${envAccounts.length} 个账号配置。`;
+  }
+
+  async function updateAvatarCache(accountId, avatarUrl) {
+    if (!avatarUrl) return;
+    const cachedKey = `avatar_cache_${accountId}`;
+    const cached = localStorage.getItem(cachedKey);
+    let needFetch = true;
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.avatarUrl === avatarUrl && parsed.base64) {
+          needFetch = false;
+          const currentAccount = store.getState().accounts[accountId];
+          if (currentAccount && currentAccount.localAvatarBase64 !== parsed.base64) {
+            store.patchAccount(accountId, { avatarUrl, localAvatarBase64: parsed.base64 });
+          }
+        }
+      } catch (_) {}
+    }
+    if (needFetch) {
+      console.log(`[Avatar Cache] Fetching new avatar for account ${accountId} from: ${avatarUrl}`);
+      const base64 = await getBase64ImageFromUrl(avatarUrl);
+      if (base64) {
+        localStorage.setItem(cachedKey, JSON.stringify({ avatarUrl, base64 }));
+        store.patchAccount(accountId, { avatarUrl, localAvatarBase64: base64 });
+        
+        SecurityStore.saveCache({
+          repos: store.getState().repos,
+          accounts: store.getState().accounts,
+          accountOrder: store.getState().accountOrder,
+          lastUpdatedAt: store.getState().lastUpdatedAt
+        });
+      }
+    }
   }
 
   async function refreshData(source) {
@@ -143,6 +205,9 @@ async function bootstrap() {
         } else {
           store.patchAccount(accountId, { repos: result.repos, etag: result.etag });
           repoGroups.push(result.repos || []);
+          if (result.avatarUrl) {
+            await updateAvatarCache(accountId, result.avatarUrl);
+          }
         }
       }
 
@@ -197,6 +262,10 @@ async function bootstrap() {
   store.subscribe((state) => {
     view.render(state);
     document.getElementById("errorInfo").textContent = state.error || "";
+    const sourceEl = document.getElementById("source");
+    if (sourceEl && sourceEl.value !== (state.activeSource || "merged")) {
+      sourceEl.value = state.activeSource || "merged";
+    }
   });
 
   function bindEvents() {
@@ -226,6 +295,48 @@ async function bootstrap() {
       store.patch({ sorting: { ...state.sorting, order: nextOrder } });
     });
     document.getElementById("source").addEventListener("change", (e) => store.patch({ activeSource: e.target.value }));
+
+    // 账号选择 Dropdown 交互逻辑
+    const accountDropdownMenu = document.getElementById("accountDropdownMenu");
+    const accountAvatarBtn = document.getElementById("accountAvatarBtn");
+    if (accountAvatarBtn && accountDropdownMenu) {
+      accountAvatarBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isClosed = accountDropdownMenu.classList.contains("scale-95");
+        if (isClosed) {
+          accountDropdownMenu.classList.remove("scale-95", "opacity-0", "pointer-events-none");
+          accountDropdownMenu.classList.add("scale-100", "opacity-100");
+        } else {
+          accountDropdownMenu.classList.remove("scale-100", "opacity-100");
+          accountDropdownMenu.classList.add("scale-95", "opacity-0", "pointer-events-none");
+        }
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!accountAvatarBtn.contains(e.target) && !accountDropdownMenu.contains(e.target)) {
+          accountDropdownMenu.classList.remove("scale-100", "opacity-100");
+          accountDropdownMenu.classList.add("scale-95", "opacity-0", "pointer-events-none");
+        }
+      });
+
+      const dropdownList = document.getElementById("accountDropdownList");
+      if (dropdownList) {
+        dropdownList.addEventListener("click", (e) => {
+          const item = e.target.closest(".account-menu-item");
+          if (!item) return;
+          const val = item.dataset.sourceVal;
+          if (val) {
+            const sourceEl = document.getElementById("source");
+            if (sourceEl) {
+              sourceEl.value = val;
+              sourceEl.dispatchEvent(new Event("change"));
+            }
+            accountDropdownMenu.classList.remove("scale-100", "opacity-100");
+            accountDropdownMenu.classList.add("scale-95", "opacity-0", "pointer-events-none");
+          }
+        });
+      }
+    }
     
     // 自动刷新事件委托，防止 innerHTML 重绘导致事件丢失
     document.getElementById("liveStatus").addEventListener("change", (e) => {
@@ -241,7 +352,8 @@ async function bootstrap() {
       SecurityStore.clearAllLocalData();
       store.patch({ repos: [], error: "已清空本地缓存（.env 配置不会被删除）。" });
       for (const accountId of store.getState().accountOrder) {
-        store.patchAccount(accountId, { repos: [], etag: "" });
+        store.patchAccount(accountId, { repos: [], etag: "", avatarUrl: "", localAvatarBase64: "" });
+        localStorage.removeItem(`avatar_cache_${accountId}`);
       }
     });
     document.getElementById("expandAll").addEventListener("click", () => {

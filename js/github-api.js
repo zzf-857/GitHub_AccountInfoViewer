@@ -106,10 +106,14 @@ async function fetchAllLists(token) {
   let hasNext = true;
   let endCursor = null;
   const lists = [];
+  let avatarUrl = "";
+  let login = "";
 
   const query = `
     query($after: String) {
       viewer {
+        login
+        avatarUrl
         lists(first: 100, after: $after) {
           nodes {
             id
@@ -134,6 +138,10 @@ async function fetchAllLists(token) {
   while (hasNext) {
     try {
       const data = await fetchGraphQL(token, query, { after: endCursor });
+      if (data?.viewer) {
+        if (!avatarUrl) avatarUrl = data.viewer.avatarUrl || "";
+        if (!login) login = data.viewer.login || "";
+      }
       const listsConnection = data?.viewer?.lists;
       if (listsConnection) {
         if (listsConnection.nodes) {
@@ -153,10 +161,10 @@ async function fetchAllLists(token) {
       }
     } catch (err) {
       console.warn("获取 GitHub Lists 失败，将忽略 List 分类功能:", err);
-      return [];
+      return { lists: [], avatarUrl: "", login: "" };
     }
   }
-  return lists;
+  return { lists, avatarUrl, login };
 }
 
 async function fetchAllStarred({ token, sourceAccount, sourceAccountLabel = "", previousEtag = "" }) {
@@ -183,7 +191,11 @@ async function fetchAllStarred({ token, sourceAccount, sourceAccountLabel = "", 
   }
 
   // Fetch lists and map them
-  const lists = await fetchAllLists(token);
+  const listsData = await fetchAllLists(token);
+  const lists = listsData.lists || [];
+  const avatarUrl = listsData.avatarUrl || "";
+  const login = listsData.login || "";
+  
   const repoToLists = {};
   for (const list of lists) {
     for (const fullName of list.repos) {
@@ -196,7 +208,7 @@ async function fetchAllStarred({ token, sourceAccount, sourceAccountLabel = "", 
     repo.lists = repoToLists[repo.fullName] || [];
   }
 
-  return { repos: normalized, lists, etag, rateLimit: lastRateLimit, unchanged: false };
+  return { repos: normalized, lists, etag, rateLimit: lastRateLimit, unchanged: false, avatarUrl, login };
 }
 
 async function unstarRepository({ token, owner, repo }) {

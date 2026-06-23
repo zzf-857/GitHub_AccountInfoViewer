@@ -339,6 +339,33 @@ function createView() {
 
     const sortOrderEl = document.getElementById("sortOrder");
     if (sortOrderEl) sortOrderEl.value = state.sorting?.order || "desc";
+
+    // 更新头像图片
+    const avatarImg = document.getElementById("userAvatarImg");
+    if (avatarImg) {
+      let targetAvatar = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 24 24' fill='none' stroke='%234edea3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='4'/><path d='M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94'/></svg>";
+      
+      const currentSource = state.activeSource || "merged";
+      if (currentSource.startsWith("account:")) {
+        const accountId = currentSource.replace("account:", "");
+        const account = state.accounts[accountId];
+        if (account) {
+          targetAvatar = account.localAvatarBase64 || account.avatarUrl || targetAvatar;
+        }
+      } else {
+        // 如果是合并，优先显示第一个账号的头像，否则显示默认 svg
+        if (state.accountOrder.length > 0) {
+          const firstAct = state.accounts[state.accountOrder[0]];
+          if (firstAct) {
+            targetAvatar = firstAct.localAvatarBase64 || firstAct.avatarUrl || targetAvatar;
+          }
+        }
+      }
+      
+      if (avatarImg.getAttribute("src") !== targetAvatar) {
+        avatarImg.src = targetAvatar;
+      }
+    }
   }
 
   function renderGitHubLists(state) {
@@ -544,6 +571,52 @@ function createView() {
     }).join("");
   }
 
+  function renderAccountDropdown(state) {
+    const listContainer = document.getElementById("accountDropdownList");
+    if (!listContainer) return;
+    
+    const currentSource = state.activeSource || "merged";
+    const html = [];
+    
+    // 1. 全部合并项
+    const mergedActive = currentSource === "merged";
+    let mergedAvatar = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 24 24' fill='none' stroke='%234edea3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='4'/><path d='M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94'/></svg>";
+    if (state.accountOrder.length > 0) {
+      const firstAct = state.accounts[state.accountOrder[0]];
+      if (firstAct) {
+        mergedAvatar = firstAct.localAvatarBase64 || firstAct.avatarUrl || mergedAvatar;
+      }
+    }
+    
+    html.push(`
+      <button class="account-menu-item w-full flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left hover:bg-white/5 ${mergedActive ? 'text-primary font-semibold' : 'text-on-surface-variant'}" data-source-val="merged">
+        <span class="material-symbols-outlined text-sm text-primary ${mergedActive ? 'opacity-100' : 'opacity-0'}">check</span>
+        <img class="w-6 h-6 rounded-full object-cover border border-white/10" src="${mergedAvatar}"/>
+        <span>全部合并</span>
+      </button>
+    `);
+    
+    // 2. 账号项
+    for (const accountId of state.accountOrder) {
+      const account = state.accounts[accountId];
+      if (!account) continue;
+      const activeVal = `account:${accountId}`;
+      const isActive = currentSource === activeVal;
+      const avatar = account.localAvatarBase64 || account.avatarUrl || mergedAvatar;
+      const displayName = account.label || accountId;
+      
+      html.push(`
+        <button class="account-menu-item w-full flex items-center gap-3 px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left hover:bg-white/5 ${isActive ? 'text-primary font-semibold' : 'text-on-surface-variant'}" data-source-val="${activeVal}">
+          <span class="material-symbols-outlined text-sm text-primary ${isActive ? 'opacity-100' : 'opacity-0'}">check</span>
+          <img class="w-6 h-6 rounded-full object-cover border border-white/10" src="${avatar}"/>
+          <span class="truncate">${escapeHtml(displayName)}</span>
+        </button>
+      `);
+    }
+    
+    listContainer.innerHTML = html.join("");
+  }
+
   function render(state) {
     const filtered = getFilteredRepos(state);
     renderFilterOptions(state);
@@ -553,6 +626,7 @@ function createView() {
     renderFilterChips(state);
     renderStatus(state, filtered);
     renderGitHubLists(state);
+    renderAccountDropdown(state);
     renderList(state, filtered);
     renderBatchActionBar(state);
   }
