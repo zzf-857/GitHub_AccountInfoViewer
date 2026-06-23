@@ -905,11 +905,78 @@ async function bootstrap() {
       store.clearRepoSelection();
     });
 
-    document.getElementById("batchUnstarBtn").addEventListener("click", async () => {
+    // Unstar Confirmation Modal 逻辑
+    let unstarCountdownTimer = null;
+    
+    function closeUnstarModal() {
+      if (unstarCountdownTimer) {
+        clearInterval(unstarCountdownTimer);
+        unstarCountdownTimer = null;
+      }
+      const overlay = document.getElementById("unstarConfirmModalOverlay");
+      overlay.classList.add("hidden");
+      overlay.classList.remove("flex");
+    }
+
+    document.getElementById("unstarConfirmCloseBtn").addEventListener("click", closeUnstarModal);
+    document.getElementById("unstarCancelBtn").addEventListener("click", closeUnstarModal);
+    document.getElementById("unstarConfirmModalOverlay").addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) {
+        closeUnstarModal();
+      }
+    });
+
+    document.getElementById("batchUnstarBtn").addEventListener("click", () => {
       const state = store.getState();
       const selectedIds = state.selectedRepoIds;
       if (!selectedIds.length) return;
-      if (!confirm(`确定要取消 Star 选中的 ${selectedIds.length} 个仓库吗？`)) return;
+
+      const overlay = document.getElementById("unstarConfirmModalOverlay");
+      const countSpan = document.getElementById("unstarSelectedCount");
+      const input = document.getElementById("unstarConfirmInput");
+      const actionBtn = document.getElementById("unstarActionBtn");
+
+      countSpan.textContent = selectedIds.length;
+      input.value = "";
+      actionBtn.disabled = true;
+      
+      let timeLeft = 3;
+      actionBtn.innerText = `确定取消 (${timeLeft}s)`;
+
+      if (unstarCountdownTimer) {
+        clearInterval(unstarCountdownTimer);
+      }
+
+      function updateBtnState() {
+        const isTextValid = input.value.trim() === "我知道了";
+        const isTimeValid = timeLeft <= 0;
+        actionBtn.disabled = !(isTextValid && isTimeValid);
+      }
+
+      input.oninput = updateBtnState;
+
+      unstarCountdownTimer = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) {
+          clearInterval(unstarCountdownTimer);
+          unstarCountdownTimer = null;
+          actionBtn.innerText = "确定取消";
+        } else {
+          actionBtn.innerText = `确定取消 (${timeLeft}s)`;
+        }
+        updateBtnState();
+      }, 1000);
+
+      overlay.classList.remove("hidden");
+      overlay.classList.add("flex");
+    });
+
+    document.getElementById("unstarActionBtn").addEventListener("click", async () => {
+      const state = store.getState();
+      const selectedIds = state.selectedRepoIds;
+      if (!selectedIds.length) return;
+
+      closeUnstarModal();
 
       const remainingRepos = state.repos.filter(repo => !selectedIds.includes(repo.id));
       store.patch({ repos: remainingRepos });
@@ -941,26 +1008,6 @@ async function bootstrap() {
         lastUpdatedAt: Date.now()
       });
       view.render(store.getState());
-    });
-
-    document.getElementById("batchListSelect").addEventListener("change", async (e) => {
-      const targetListName = e.target.value;
-      if (!targetListName) return;
-      const state = store.getState();
-      const selectedIds = [...state.selectedRepoIds];
-      e.target.value = "";
-      let targetListId = "";
-      let targetAccountId = "";
-      for (const accountId of state.accountOrder) {
-        const account = state.accounts[accountId];
-        const matched = account?.lists?.find(l => l.name === targetListName);
-        if (matched) {
-          targetListId = matched.id;
-          targetAccountId = accountId;
-          break;
-        }
-      }
-      await executeBatchAddToList(selectedIds, targetListName, targetListId, targetAccountId);
     });
 
     listsContainer.addEventListener("click", async (e) => {

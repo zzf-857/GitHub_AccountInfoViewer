@@ -497,17 +497,47 @@
       <span class="font-label-mono text-sm">已选择仓库</span>
     </div>
     <div class="flex items-center gap-4">
-      <div class="relative flex items-center bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 hover:bg-white/10 transition-all">
-        <span class="material-symbols-outlined text-[18px] text-on-surface-variant mr-1">drive_file_move</span>
-        <select id="batchListSelect" class="bg-transparent border-none text-xs font-label-mono focus:ring-0 p-0 pr-6 cursor-pointer text-on-surface outline-none">
-          <option value="">移动到目标 List...</option>
-        </select>
-      </div>
       <button id="batchUnstarBtn" class="flex items-center gap-2 px-4 py-1.5 text-error/80 hover:bg-error/10 rounded-lg transition-all font-label-mono text-sm border border-error/20 bg-error/5 hover:text-error">
         <span class="material-symbols-outlined text-sm">heart_minus</span>
         批量取消 Star (Unstar)
       </button>
       <button id="batchClearBtn" class="font-label-mono text-sm text-on-surface-variant hover:text-on-surface transition-all">取消选择</button>
+    </div>
+  </div>
+
+  <!-- Unstar Confirmation Modal Overlay -->
+  <div class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm transition-all" id="unstarConfirmModalOverlay">
+    <div class="glass-panel w-11/12 max-w-md rounded-2xl border border-error/20 shadow-2xl flex flex-col overflow-hidden">
+      <!-- Header -->
+      <div class="flex justify-between items-center px-6 py-4 border-b border-white/10 bg-error/5">
+        <div class="flex items-center gap-3 text-error">
+          <span class="material-symbols-outlined text-xl">warning</span>
+          <h3 class="font-headline-md text-base font-semibold">⚠️ 危险操作：批量取消 Star</h3>
+        </div>
+        <button class="p-1 hover:bg-white/10 rounded-lg transition-colors material-symbols-outlined text-on-surface-variant hover:text-on-surface select-none outline-none" id="unstarConfirmCloseBtn">close</button>
+      </div>
+      <!-- Body -->
+      <div class="p-6 flex flex-col gap-4">
+        <div class="text-sm text-on-surface/90 leading-relaxed">
+          您当前选择了 <span class="font-bold text-error text-base px-1" id="unstarSelectedCount">0</span> 个仓库。
+          <p class="mt-2 text-on-surface-variant text-xs leading-normal">
+            此操作<span class="text-error font-bold">不可逆</span>！一旦确定，系统将立刻通过 GitHub API 移除这些仓库的 Star。您在 GitHub 上的数据将同步受到影响。
+          </p>
+        </div>
+        
+        <!-- Input verification -->
+        <div class="flex flex-col gap-2 mt-2">
+          <label class="text-xs text-on-surface-variant font-label-mono">请在下方输入 <span class="text-error font-bold">我知道了</span> 以确认操作：</label>
+          <input type="text" id="unstarConfirmInput" autocomplete="off" placeholder="请输入：我知道了" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-error/40 transition-colors" />
+        </div>
+      </div>
+      <!-- Footer -->
+      <div class="flex justify-end gap-3 px-6 py-4 border-t border-white/10 bg-white/5">
+        <button class="px-4 py-2 rounded-lg text-xs font-label-mono text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all border border-white/5" id="unstarCancelBtn">取消</button>
+        <button class="px-4 py-2 rounded-lg text-xs font-label-mono bg-error/20 text-error hover:bg-error/30 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-error/20 transition-all border border-error/30 flex items-center justify-center min-w-[120px]" id="unstarActionBtn" disabled>
+          确定取消 (3s)
+        </button>
+      </div>
     </div>
   </div>
 

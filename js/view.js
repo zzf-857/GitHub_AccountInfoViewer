@@ -451,7 +451,6 @@ function createView() {
   function renderBatchActionBar(state) {
     const bar = document.getElementById("batchActionBar");
     const countEl = document.getElementById("batchSelectedCount");
-    const select = document.getElementById("batchListSelect");
     if (!bar || !countEl) return;
 
     const selectedCount = state.selectedRepoIds.length;
@@ -459,23 +458,6 @@ function createView() {
       countEl.textContent = selectedCount;
       // Show batch action bar
       bar.classList.remove("translate-y-32", "opacity-0");
-
-      // Populate lists dropdown
-      const uniqueLists = new Set();
-      for (const accountId of state.accountOrder) {
-        const account = state.accounts[accountId];
-        if (account && account.lists) {
-          for (const lst of account.lists) {
-            uniqueLists.add(lst.name);
-          }
-        }
-      }
-
-      const options = ['<option value="">移动到目标 List...</option>'];
-      for (const listName of [...uniqueLists].sort()) {
-        options.push(`<option value="${escapeHtml(listName)}">${escapeHtml(listName)}</option>`);
-      }
-      select.innerHTML = options.join("");
     } else {
       // Hide batch action bar
       bar.classList.add("translate-y-32", "opacity-0");
