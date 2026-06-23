@@ -1,1187 +1,84 @@
-<!doctype html>
-<html lang="zh-CN">
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Starred Intelligence</title>
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Starred Intelligence | GitHub 生态管理</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     :root {
-      --bg: #0f1117;
-      --surface: #161920;
-      --surface-raised: #1e222a;
-      --surface-hover: #252830;
-      --line: #2a2e36;
-      --line-strong: #3b404a;
-      --text: #e8eaed;
-      --muted: #9ca3af;
-      --faint: #636a78;
-      
-      /* Web3 Neon Colors */
-      --neon-cyan: #00f0ff;
-      --neon-purple: #b82aff;
-      --neon-orange: #ff7700;
-      --neon-pink: #ff0066;
-      
-      --accent: var(--neon-cyan);
-      --green: #8bd17c;
-      --amber: #f4c95d;
-      --rose: #ff7a90;
-      
-      --font-page-title: 32px;
-      --font-section-title: 20px;
-      --font-body: 16px;
-      --font-repo-title: 17px;
-      --font-meta: 14px;
-      --font-tag: 13px;
-      --font-mono: "Geist Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      --obsidian: #0f111a;
+      --glass-bg: rgba(22, 27, 34, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --neon-cyan: #4cd7f6;
     }
-
-    * { box-sizing: border-box; }
 
     body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: Inter, "Segoe UI", "PingFang SC", system-ui, sans-serif;
-      font-size: var(--font-body);
-      line-height: 1.6;
-      letter-spacing: 0;
-      color: var(--text);
-      background: var(--bg);
+      background-color: var(--obsidian);
+      color: #e3e2e8;
+      overflow-x: hidden;
+      font-family: 'Outfit', sans-serif;
     }
 
-    a { color: inherit; text-decoration: none; }
-    a:hover { color: var(--accent); }
-
-    button,
-    input,
-    select {
-      font: inherit;
-      letter-spacing: 0;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 260px minmax(0, 1fr);
-      gap: 24px;
-      width: min(100%, 1760px);
-      min-height: 100vh;
-      margin: 0 auto;
-      padding: 24px;
-    }
-
-    .sidebar {
-      position: sticky;
-      top: 24px;
-      height: calc(100vh - 48px);
-      overflow: auto;
-      padding: 20px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-    }
-
-    .brand-title {
-      margin: 0 0 8px;
-      font-size: 24px;
-      line-height: 32px;
-      font-weight: 600;
-    }
-
-    .sidebar-copy,
-    .helper,
-    .repo-meta,
-    .chart-note,
-    .status {
-      color: var(--muted);
-      font-size: var(--font-meta);
-      line-height: 22px;
-    }
-
-    .field { margin-top: 18px; }
-
-    .label {
-      display: block;
-      margin-bottom: 8px;
-      color: var(--muted);
-      font-size: var(--font-meta);
-      line-height: 22px;
-      font-weight: 500;
-    }
-
-    input,
-    select,
-    button {
-      width: 100%;
-      min-height: 44px;
-      padding: 0 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      color: var(--text);
-      background: var(--surface-raised);
-      font-size: 15px;
-      line-height: 22px;
-    }
-
-    input:focus,
-    select:focus,
-    button:focus-visible {
-      outline: 2px solid rgba(61, 214, 198, 0.32);
-      outline-offset: 2px;
-    }
-
-    button {
-      cursor: pointer;
-      font-weight: 500;
-    }
-
-    button:hover,
-    .saved-view:hover {
-      background: var(--surface-hover);
-      border-color: var(--line-strong);
-    }
-
-    .button-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 18px;
-    }
-
-    /* Drag & Drop premium effects */
-    .github-list-btn.drop-target-active {
-      border-style: dashed;
-      border-color: var(--neon-cyan);
-      animation: pulse-border 1.5s infinite;
-      box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
-    }
-    
-    @keyframes pulse-border {
-      0% { border-color: rgba(0, 240, 255, 0.4); box-shadow: 0 0 4px rgba(0, 240, 255, 0.1); }
-      50% { border-color: rgba(0, 240, 255, 1.0); box-shadow: 0 0 14px rgba(0, 240, 255, 0.4); }
-      100% { border-color: rgba(0, 240, 255, 0.4); box-shadow: 0 0 4px rgba(0, 240, 255, 0.1); }
-    }
-
-    .github-list-btn.drag-over {
-      background: rgba(0, 240, 255, 0.2) !important;
-      border-color: var(--neon-cyan) !important;
-      transform: scale(1.02);
-    }
-
-    .repo-card.dragging {
-      opacity: 0.4;
-      border: 1px dashed var(--neon-cyan);
-    }
-
-    .repo-card.selected {
-      background: rgba(0, 240, 255, 0.04) !important;
-      border-color: rgba(0, 240, 255, 0.4) !important;
-    }
-
-    .repo-card {
-      display: flex !important;
-      align-items: center !important;
-    }
-
-    .repo-select-container {
-      display: flex;
-      align-items: center;
-      padding-right: 12px;
-    }
-
-    .repo-checkbox {
-      width: 18px !important;
-      height: 18px !important;
-      min-height: auto !important;
-      cursor: pointer;
-      accent-color: var(--neon-cyan);
-    }
-
-    .repo-card-content {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(160px, auto);
-      gap: 18px;
-      width: 100%;
-    }
-
-    /* Floating Batch Action Bar */
-    .batch-action-bar {
-      position: fixed;
-      bottom: -80px; /* Hidden by default */
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(90%, 800px);
-      height: 64px;
-      padding: 0 24px;
-      background: rgba(22, 25, 32, 0.95);
-      border: 1px solid var(--neon-cyan);
-      border-radius: 32px;
-      box-shadow: 0 8px 32px rgba(0, 240, 255, 0.15), 0 0 1px rgba(0, 240, 255, 0.5);
+    .glass-panel {
+      background: var(--glass-bg);
       backdrop-filter: blur(12px);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      z-index: 1000;
-      transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
 
-    .batch-action-bar.visible {
-      bottom: 24px;
+    .cyber-glow-green:hover {
+      box-shadow: 0 0 15px rgba(78, 222, 163, 0.15);
+      border-color: rgba(78, 222, 163, 0.3);
     }
 
-    .batch-info {
-      font-size: 15px;
-      color: var(--text);
-      font-weight: 500;
-    }
-
-    .batch-info span {
-      color: var(--neon-cyan);
-      font-weight: 600;
-      margin: 0 4px;
-    }
-
-    .batch-actions {
-      display: flex;
-      gap: 12px;
-    }
-
-    .batch-btn {
-      min-height: 36px !important;
-      padding: 0 16px !important;
-      font-size: 13px !important;
-      font-weight: 500 !important;
-      width: auto !important;
-      border-radius: 18px !important;
-      transition: all 0.2s ease;
-    }
-
-    .batch-btn-danger {
-      background: rgba(255, 0, 102, 0.1);
-      color: var(--neon-pink);
-      border-color: rgba(255, 0, 102, 0.4);
-    }
-
-    .batch-btn-danger:hover {
-      background: rgba(255, 0, 102, 0.2);
-      border-color: var(--neon-pink);
-      box-shadow: 0 0 10px rgba(255, 0, 102, 0.2);
-    }
-
-    .batch-btn-secondary {
-      background: transparent;
-      color: var(--muted);
-      border-color: var(--line);
-    }
-
-    .batch-btn-secondary:hover {
-      color: var(--text);
-      border-color: var(--line-strong);
-    }
-
-    /* Sidebar List Inline Actions */
-    .github-list-btn {
-      position: relative;
-      padding-right: 80px !important; /* Make room for counts and edit buttons */
-    }
-
-    .list-meta-actions {
-      position: absolute;
-      right: 12px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .list-action-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 24px;
-      height: 24px;
-      border: 1px solid transparent;
-      border-radius: 4px;
-      background: transparent;
-      color: var(--faint);
-      cursor: pointer;
-      padding: 0;
-      min-height: auto !important;
-      width: 24px !important;
-      transition: all 0.15s ease;
-      opacity: 0; /* Hidden by default */
-    }
-
-    .github-list-btn:hover .list-action-btn {
-      opacity: 1; /* Show on hover */
-    }
-
-    .list-action-btn:hover {
-      color: var(--text);
-      background: var(--surface-hover);
-      border-color: var(--line);
-    }
-
-    .list-action-btn.delete:hover {
-      color: var(--neon-pink);
-      background: rgba(255, 0, 102, 0.1);
-      border-color: rgba(255, 0, 102, 0.2);
-    }
-
-    .add-list-section {
-      margin-top: 12px;
-      padding: 0 4px;
-    }
-
-    .add-list-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      width: 100%;
-      min-height: 38px;
-      border: 1px dashed var(--line);
-      border-radius: 8px;
-      background: transparent;
-      color: var(--muted);
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .add-list-btn:hover {
-      color: var(--neon-cyan);
-      border-color: var(--neon-cyan);
-      background: rgba(0, 240, 255, 0.03);
-    }
-
-    /* Inline Edit Inputs */
-    .list-edit-input {
-      width: calc(100% - 24px) !important;
-      min-height: 32px !important;
-      height: 32px !important;
-      padding: 0 8px !important;
-      font-size: 14px !important;
-      background: var(--surface) !important;
-      border: 1px solid var(--neon-cyan) !important;
-      border-radius: 4px !important;
-      color: var(--text) !important;
-    }
-
-    .github-lists-container {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .github-list-btn {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-      min-height: 48px;
-      padding: 0 16px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      color: var(--text);
-      background: var(--surface-raised);
-      font-size: 15px;
-      line-height: 22px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      text-align: left;
-    }
-
-    .github-list-btn:hover {
-      background: var(--surface-hover);
-      border-color: var(--neon-cyan);
-      box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
-    }
-
-    .github-list-btn.active {
-      background: rgba(0, 240, 255, 0.1);
-      border-color: var(--neon-cyan);
-      color: var(--neon-cyan);
-      font-weight: 600;
-    }
-
-    .github-list-btn .list-count {
-      font-size: 13px;
-      color: var(--muted);
-      background: var(--surface);
-      padding: 2px 8px;
-      border-radius: 12px;
-      border: 1px solid var(--line);
-    }
-
-    .github-list-btn.active .list-count {
-      color: var(--neon-cyan);
-      border-color: rgba(0, 240, 255, 0.3);
-      background: rgba(0, 240, 255, 0.15);
-    }
-
-    .repo-list-tag {
-      padding: 2px 8px;
-      border: 1px solid rgba(184, 42, 255, 0.4);
-      border-radius: 4px;
-      color: #d880ff;
-      background: rgba(184, 42, 255, 0.1);
-      font-size: var(--font-tag);
-      line-height: 18px;
-      font-weight: 500;
-    }
-
-    .filter-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .filter-grid .field { margin-top: 0; }
-    .toggle-field {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      min-height: 44px;
-      padding: 0 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface-raised);
-    }
-    .toggle-field .label {
-      margin-bottom: 0;
-    }
-    .toggle-field input[type="checkbox"] {
-      width: 18px;
-      min-height: auto;
-      height: 18px;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
-
-    .main {
-      display: grid;
-      gap: 20px;
-      min-width: 0;
-    }
-
-    .topbar {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 20px;
-    }
-
-    .page-title {
-      margin: 0;
-      font-size: var(--font-page-title);
-      line-height: 38px;
-      font-weight: 600;
-    }
-
-    .topbar-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 320px;
-    }
-
-    .account-badge {
-      white-space: nowrap;
-      padding: 10px 12px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      color: var(--muted);
-      background: var(--surface);
-      font-size: var(--font-meta);
-      line-height: 22px;
-    }
-
-    .status-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(220px, 0.35fr);
-      gap: 12px;
-    }
-
-    .status {
-      padding: 12px 14px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-    }
-
-    /* Neon Navigation */
-    .neon-nav {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    
-    .neon-btn {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      border-radius: 10px;
-      border: 1.5px solid;
-      text-decoration: none;
-      transition: all 0.2s ease;
-      cursor: pointer;
-    }
-    
-    .neon-btn:hover {
-      filter: brightness(1.2);
-    }
-    
-    .neon-icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 30px;
-      height: 30px;
-      border-radius: 8px;
-      color: #fff;
-    }
-    
-    .neon-btn .title {
-      font-size: 14px;
-      font-weight: 700;
-      margin: 0;
-      line-height: 1.2;
-    }
-    
-    .neon-btn .subtitle {
-      font-size: 10px;
-      margin: 2px 0 0;
-      opacity: 0.8;
-    }
-    
-    .btn-explore {
-      background: #031718;
-      border-color: #00f0ff55;
-    }
-    .btn-explore .neon-icon { background: var(--neon-cyan); }
-    .btn-explore .title { color: var(--neon-cyan); }
-    .btn-explore .subtitle { color: #b3fdff; }
-    
-    .btn-topics {
-      background: #130822;
-      border-color: #b82aff55;
-    }
-    .btn-topics .neon-icon { background: var(--neon-purple); }
-    .btn-topics .title { color: var(--neon-purple); }
-    .btn-topics .subtitle { color: #e7bdfc; }
-    
-    .btn-trending {
-      background: #1c0d03;
-      border-color: #ff770055;
-    }
-    .btn-trending .neon-icon { background: var(--neon-orange); }
-    .btn-trending .title { color: var(--neon-orange); }
-    .btn-trending .subtitle { color: #ffccaa; }
-    
-    .btn-collections {
-      background: #1f0612;
-      border-color: #ff006655;
-    }
-    .btn-collections .neon-icon { background: var(--neon-pink); }
-    .btn-collections .title { color: var(--neon-pink); }
-    .btn-collections .subtitle { color: #ffb3d1; }
-    
-    .badge-current {
-      background: var(--neon-orange);
-      color: #0f1117;
-      font-size: 9px;
-      font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 999px;
-      margin-left: auto;
-    }
-
-    /* Metrics Banner */
-    .metrics-banner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      padding: 20px 24px;
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      margin-bottom: 24px;
-      overflow-x: auto;
-    }
-
-    .metric-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      flex: 1;
-      min-width: 120px;
-      padding: 0 20px;
-      border-right: 1px solid var(--line);
-      text-align: center;
-    }
-    .metric-item:last-child {
-      border-right: none;
-      padding-right: 0;
-    }
-
-    .metric-value {
-      font-family: var(--font-mono);
-      font-size: 32px;
-      font-weight: 700;
-      line-height: 1;
-      color: var(--text);
-    }
-    
-    .metric-value.highlight {
-      color: var(--neon-cyan);
-    }
-
-    .metric-label {
-      font-size: var(--font-meta);
-      color: var(--muted);
-    }
-
-    .charts {
-      display: grid;
-      gap: 12px;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .panel-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .tag,
-    .filter-chip,
-    .topic-chip,
-    .repo-topic,
-    .repo-language {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      min-height: 26px;
-      padding: 3px 8px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      color: var(--muted);
-      font-size: var(--font-tag);
-      line-height: 18px;
-      font-weight: 500;
-    }
-
-    .chart-box {
-      height: 260px;
-    }
-
-    .topic-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .topic-row {
-      display: grid;
-      grid-template-columns: minmax(80px, 1fr) minmax(40px, auto);
-      gap: 12px;
-      align-items: center;
-      color: var(--muted);
-      font-size: var(--font-meta);
-    }
-
-    .topic-bar {
-      grid-column: 1 / -1;
-      height: 6px;
-      overflow: hidden;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.06);
-    }
-
-    .topic-bar span {
-      display: block;
-      height: 100%;
-      border-radius: inherit;
-      background: var(--neon-purple);
-      box-shadow: 0 0 8px rgba(184, 42, 255, 0.4);
-    }
-
-    .list-panel {
-      padding: 18px;
-    }
-
-    .list-toolbar {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 14px;
-    }
-    .list-toolbar-controls {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-    .inline-control {
-      width: auto;
-      min-width: 140px;
-      min-height: 34px;
-      height: 34px;
-      padding: 0 10px;
-      font-size: 13px;
-      line-height: 20px;
-    }
-
-    .filter-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 12px 0 14px;
-    }
-
-    .filter-chip {
-      width: auto;
-      min-height: 30px;
-      background: var(--surface-raised);
-    }
-
-    #listWrap {
-      display: grid;
-      gap: 10px;
-      max-height: none;
+    .cyber-glow-cyan:focus-within {
+      box-shadow: 0 0 20px rgba(76, 215, 246, 0.15);
+      border-color: rgba(76, 215, 246, 0.4);
     }
 
     .repo-card {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(160px, auto);
-      gap: 18px;
-      min-height: 104px;
-      padding: 18px 20px;
-      transition: background 160ms ease, border-color 160ms ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .repo-card:hover {
-      border-color: var(--line-strong);
-      background: var(--surface-hover);
+      transform: translateY(-4px);
     }
 
-    .repo-title {
-      margin: 0 0 8px;
-      font-size: var(--font-repo-title);
-      line-height: 26px;
-      font-weight: 600;
+    .repo-card.selected {
+      background: rgba(76, 215, 246, 0.05) !important;
+      border-color: rgba(76, 215, 246, 0.4) !important;
     }
 
-    .repo-owner {
-      color: var(--muted);
-      font-weight: 400;
+    /* Drag & Drop dynamic effects */
+    .github-list-btn.drop-target-active {
+      border-style: dashed;
+      border-color: #4edea3;
+      background: rgba(78, 222, 163, 0.03);
     }
 
-    .repo-desc {
-      display: -webkit-box;
-      margin: 0;
-      overflow: hidden;
-      color: var(--text);
-      font-size: var(--font-body);
-      line-height: 26px;
-      -webkit-line-clamp: 2;
-      line-clamp: 2;
-      -webkit-box-orient: vertical;
+    .github-list-btn.drag-over {
+      background: rgba(78, 222, 163, 0.1) !important;
+      border-color: #4edea3 !important;
+      transform: scale(1.02);
     }
 
-    .repo-desc-cn {
-      display: none;
-      margin-top: 14px;
-      padding: 10px 14px;
-      border-left: 3px solid var(--neon-cyan);
-      background: rgba(0, 240, 255, 0.05);
-      border-radius: 0 6px 6px 0;
-      color: #b3fdff;
-      font-size: 15px;
-      line-height: 26px;
-    }
-
-    .repo-card.expanded .repo-desc-cn {
-      display: block;
-    }
-
-    .repo-side {
-      display: grid;
-      align-content: start;
-      justify-items: end;
-      gap: 8px;
-      min-width: 160px;
-    }
-
-    .repo-topics {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 12px;
-    }
-
-    .language-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-    }
-
-    /* AI Insight Styles */
-    .ai-guide-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      min-height: 28px;
-      padding: 4px 12px;
-      margin-top: 12px;
-      background: rgba(184, 42, 255, 0.1);
-      border: 1px solid rgba(184, 42, 255, 0.3);
-      border-radius: 999px;
-      color: var(--neon-purple);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 0 10px rgba(184, 42, 255, 0.1) inset;
-      width: auto;
-    }
-
-    .ai-guide-btn:hover {
-      background: rgba(184, 42, 255, 0.2);
-      border-color: var(--neon-purple);
-      box-shadow: 0 0 12px rgba(184, 42, 255, 0.3);
-      text-shadow: 0 0 8px rgba(184, 42, 255, 0.5);
-    }
-    
-    .ai-guide-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      animation: aiPulse 1.5s infinite;
-    }
-
-    .ai-guide-btn.ai-offline {
-      opacity: 0.35;
-      cursor: not-allowed;
-      pointer-events: none;
-      filter: grayscale(100%);
-    }
-
-    /* AI Health Indicator */
-    .ai-health-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      font-family: var(--font-mono);
-      color: #a3aab5;
-      padding: 4px 12px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-    .ai-health-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #555;
-      transition: all 0.3s;
-    }
-    .ai-health-dot.checking {
-      background: #f59e0b;
-      animation: healthPulse 1s infinite;
-    }
-    .ai-health-dot.online {
-      background: #22c55e;
-      box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
-    }
-    .ai-health-dot.offline {
-      background: #ef4444;
-      box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
-    }
-    @keyframes healthPulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-    
-    @keyframes aiPulse {
-      0% { box-shadow: 0 0 0 0 rgba(184, 42, 255, 0.4); }
-      70% { box-shadow: 0 0 0 6px rgba(184, 42, 255, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(184, 42, 255, 0); }
-    }
-
-    .ai-insight-panel {
-      grid-column: 1 / -1;
-      margin-top: 6px;
-      padding: 16px 20px;
-      background: rgba(15, 17, 23, 0.6);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(184, 42, 255, 0.2);
-      border-top: 2px solid var(--neon-purple);
-      border-radius: 8px;
-      color: #e2e8f0;
-      font-size: 15px;
-      line-height: 1.7;
-      display: none;
-    }
-    
-    .ai-insight-panel.visible {
-      display: block;
-      animation: fadeIn 0.3s ease;
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .ai-insight-panel p { margin: 0 0 12px; }
-    .ai-insight-panel p:last-child { margin-bottom: 0; }
-    .ai-insight-panel ul, .ai-insight-panel ol { margin: 8px 0; padding-left: 24px; }
-    .ai-insight-panel li { margin-bottom: 6px; }
-    .ai-insight-panel strong { color: var(--neon-cyan); }
-    .ai-insight-panel code { 
-      background: rgba(0, 0, 0, 0.3);
-      padding: 2px 6px;
-      border-radius: 4px;
-      color: #ffb3d1;
-      font-family: var(--font-mono);
-      font-size: 0.9em;
-    }
-
-    .ai-cursor {
-      display: inline-block;
-      width: 8px;
-      height: 15px;
-      background-color: var(--neon-purple);
-      vertical-align: middle;
-      margin-left: 4px;
-      animation: blink 1s step-end infinite;
-    }
-    
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-
-    /* AI Loading Animation */
-    .ai-loading-container {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      margin-top: 10px;
-    }
-    
-    .ai-loading-step {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      color: var(--neon-cyan);
-      font-size: 15px;
-      font-weight: 500;
-      opacity: 0.9;
-    }
-    
-    .ai-loading-step::before {
-      content: "";
-      width: 16px;
-      height: 16px;
-      border: 2px solid var(--neon-cyan);
-      border-top-color: transparent;
-      border-radius: 50%;
-      animation: aiLoadingSpin 1s linear infinite;
-    }
-    
-    .ai-loading-step.thinking {
-      color: var(--neon-purple);
-      animation: pulseText 2s ease-in-out infinite;
-    }
-    
-    .ai-loading-step.thinking::before {
-      border-color: var(--neon-purple);
-      border-top-color: transparent;
-      animation: aiLoadingSpin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-    }
-    
-    @keyframes aiLoadingSpin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    @keyframes pulseText {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 1; }
-    }
-
-    /* AI Modal Global Styles */
-    .ai-modal-overlay {
+    /* Lasso selection box style */
+    .selection-box {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(4px);
-      z-index: 1000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-    }
-    .ai-modal-overlay.visible {
-      display: flex;
-      animation: fadeIn 0.2s ease;
-    }
-    .ai-modal {
-      width: 90%;
-      max-width: 700px;
-      max-height: 85vh;
-      background: rgba(10, 12, 16, 0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(0, 240, 255, 0.3);
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 240, 255, 0.15) inset;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .ai-modal-header {
-      padding: 18px 24px;
-      background: linear-gradient(90deg, rgba(0, 240, 255, 0.1) 0%, rgba(184, 42, 255, 0.05) 100%);
-      border-bottom: 1px solid rgba(0, 240, 255, 0.2);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .ai-modal-header h3 {
-      margin: 0;
-      font-size: 18px;
-      color: #fff;
-      text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      letter-spacing: 0.5px;
-    }
-    .ai-modal-badge {
-      font-size: 12px;
-      padding: 4px 10px;
-      border-radius: 6px;
-      background: rgba(0, 240, 255, 0.1);
-      border: 1px solid rgba(0, 240, 255, 0.3);
-      color: var(--neon-cyan);
-      font-family: var(--font-mono);
-      font-weight: 500;
-      white-space: nowrap;
-    }
-    .ai-modal-close {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
-      color: #636a78;
-      font-size: 0;
-      width: 34px;
-      min-height: 34px;
-      height: 34px;
-      padding: 0;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      overflow: hidden;
-    }
-    .ai-modal-close::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: radial-gradient(circle at center, rgba(255, 0, 102, 0.15), transparent 70%);
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    .ai-modal-close svg {
-      width: 16px;
-      height: 16px;
-      stroke: currentColor;
-      stroke-width: 2;
-      stroke-linecap: round;
-      fill: none;
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      z-index: 1;
-    }
-    .ai-modal-close:hover {
-      background: rgba(255, 0, 102, 0.12);
-      border-color: rgba(255, 0, 102, 0.35);
-      color: var(--neon-pink);
-      box-shadow: 0 0 16px rgba(255, 0, 102, 0.2), inset 0 0 12px rgba(255, 0, 102, 0.08);
-      transform: scale(1.08);
-    }
-    .ai-modal-close:hover::before {
-      opacity: 1;
-    }
-    .ai-modal-close:hover svg {
-      transform: rotate(90deg);
-    }
-    .ai-modal-close:active {
-      transform: scale(0.95);
-      transition-duration: 0.1s;
-    }
-    .ai-modal-content {
-      padding: 28px 32px;
-      overflow-y: auto;
-      color: #f8f9fa;
-      font-size: 15px;
-      line-height: 1.8;
-      letter-spacing: 0.2px;
-    }
-    
-    .ai-modal-content h1, .ai-modal-content h2, .ai-modal-content h3 {
-      color: var(--neon-cyan);
-      margin-top: 24px;
-      margin-bottom: 12px;
-      font-weight: 600;
-    }
-    .ai-modal-content h1:first-child, .ai-modal-content h2:first-child, .ai-modal-content h3:first-child {
-      margin-top: 0;
-    }
-    .ai-modal-content p { margin: 0 0 16px; }
-    .ai-modal-content p:last-child { margin-bottom: 0; }
-    .ai-modal-content ul, .ai-modal-content ol { margin: 12px 0 20px; padding-left: 24px; }
-    .ai-modal-content li { margin-bottom: 8px; color: #d1d5db; }
-    .ai-modal-content strong { color: var(--neon-orange); font-weight: 600; }
-    .ai-modal-content a { color: var(--neon-cyan); text-decoration: none; }
-    .ai-modal-content a:hover { text-decoration: underline; }
-    .ai-modal-content blockquote {
-      margin: 16px 0;
-      padding: 12px 16px;
-      border-left: 4px solid var(--neon-purple);
-      background: rgba(184, 42, 255, 0.05);
-      color: #a3aab5;
-    }
-    .ai-modal-content code { 
-      background: rgba(0, 0, 0, 0.5);
-      padding: 3px 6px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 4px;
-      color: #ffb3d1;
-      font-family: var(--font-mono);
-      font-size: 0.9em;
+      border: 1.5px dashed var(--neon-cyan);
+      background: rgba(76, 215, 246, 0.1);
+      pointer-events: none;
+      z-index: 10000;
+      box-shadow: 0 0 8px rgba(76, 215, 246, 0.2);
     }
 
-    /* Custom Scrollbar — Global */
+    /* Custom Scrollbar */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -1190,353 +87,371 @@
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.16);
-    }
-    ::-webkit-scrollbar-corner {
-      background: transparent;
+      background: rgba(255, 255, 255, 0.2);
     }
 
-    /* AI Modal Scrollbar — More visible */
-    .ai-modal-content::-webkit-scrollbar {
-      width: 5px;
-    }
-    .ai-modal-content::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.02);
-      border-radius: 999px;
-      margin: 8px 0;
-    }
-    .ai-modal-content::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, rgba(0, 240, 255, 0.2), rgba(184, 42, 255, 0.2));
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .ai-modal-content::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(180deg, rgba(0, 240, 255, 0.35), rgba(184, 42, 255, 0.35));
-    }
-
-    /* Firefox scrollbar */
-    * {
-      scrollbar-width: thin;
-      scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
-    }
-    .ai-modal-content {
-      scrollbar-color: rgba(0, 240, 255, 0.2) rgba(255, 255, 255, 0.02);
-    }
-
-    .empty-state,
-    .skeleton-panel {
-      display: none;
-      padding: 28px;
-      color: var(--muted);
-    }
-
-    .empty-state.visible,
-    .skeleton-panel.visible {
-      display: block;
-    }
-
-    .skeleton-line {
-      height: 14px;
-      margin: 12px 0;
-      border-radius: 999px;
-      background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.12), rgba(255,255,255,0.06));
-    }
-
-    .error {
-      min-height: 22px;
-      color: var(--rose);
-      font-size: var(--font-meta);
-      line-height: 22px;
-    }
-
-    @media (max-width: 1200px) {
-      .layout { grid-template-columns: 1fr; }
-      .sidebar { position: static; height: auto; }
-      .topbar,
-      .list-toolbar { flex-direction: column; }
-      .topbar-actions { width: 100%; min-width: 0; }
-      .insight-summary,
-      .kpi,
-      .charts { grid-template-columns: 1fr 1fr; }
-    }
-
-    @media (max-width: 760px) {
-      .layout { padding: 14px; }
-      .main { order: 1; }
-      .sidebar { order: 2; }
-      .insight-summary,
-      .kpi,
-      .charts,
-      .status-grid,
-      .repo-card { grid-template-columns: 1fr; }
-      .repo-side { justify-items: start; }
-      .button-row { grid-template-columns: 1fr; }
-    }
-    /* Selection box for lasso/box selection */
-    .selection-box {
-      position: fixed;
-      border: 1.5px dashed var(--neon-cyan);
-      background: rgba(0, 240, 255, 0.1);
-      pointer-events: none;
-      z-index: 10000;
-      box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+    /* Select element default overriding */
+    select {
+      color-scheme: dark;
     }
   </style>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-low": "#161822",
+            "surface-container-high": "#242732",
+            "background": "#0f111a",
+            "secondary": "#4cd7f6",
+            "primary": "#4edea3",
+            "on-surface": "#e3e2e8",
+            "on-surface-variant": "#a2aab5",
+            "primary-container": "#10b981",
+            "on-primary-container": "#00422b",
+            "tertiary": "#d0bcff",
+            "secondary-container": "#03b5d3",
+            "error": "#ef4444"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "container-padding-mobile": "16px",
+            "card-gap": "16px",
+            "container-padding-desktop": "32px"
+          },
+          "fontFamily": {
+            "headline-xl": ["Outfit"],
+            "body-lg": ["Outfit"],
+            "label-mono": ["Geist Mono"],
+            "metric-display": ["Geist Mono"],
+            "headline-lg": ["Outfit"],
+            "body-md": ["Outfit"],
+            "headline-md": ["Outfit"]
+          },
+          "fontSize": {
+            "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "label-mono": ["13px", { "lineHeight": "18px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+            "metric-display": ["20px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "body-md": ["15px", { "lineHeight": "22px", "fontWeight": "400" }],
+            "headline-md": ["22px", { "lineHeight": "30px", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
 </head>
-<body>
-  <div class="layout">
-    <aside class="sidebar">
-      <h1 class="brand-title">Starred Intelligence</h1>
-      <p class="sidebar-copy">洞察优先的 GitHub Star 收藏分析。大字号、低噪音、列表优先。</p>
-
-      <div class="field">
-        <label class="label" for="globalSearch">全局搜索</label>
-        <input id="globalSearch" placeholder="按仓库、owner、描述、主题搜索" />
+<body class="dark bg-background text-on-surface min-h-screen flex flex-col">
+  <!-- Top Navigation Bar -->
+  <header class="fixed top-0 w-full z-50 flex justify-between items-center px-container-padding-desktop py-3.5 glass-panel border-b border-white/10 bg-background/70 backdrop-blur-xl shadow-md">
+    <div class="flex items-center gap-8">
+      <span class="font-headline-md text-headline-md font-bold text-primary tracking-wide">Starred Intelligence</span>
+      <div class="flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 cyber-glow-cyan transition-all">
+        <span class="material-symbols-outlined text-secondary text-sm">account_tree</span>
+        <select id="source" class="bg-transparent border-none text-sm font-label-mono focus:ring-0 p-0 pr-6 cursor-pointer text-on-surface outline-none">
+          <option value="merged">全部账号合并</option>
+        </select>
       </div>
-
-      <div class="field" style="margin-top: 18px;">
-        <label class="label" for="source">数据源</label>
-        <select id="source"><option value="merged">全部账号合并</option></select>
-      </div>
-
-      <div class="field">
-        <label class="label">GitHub Lists 分类</label>
-        <div class="github-lists-container" id="githubListsContainer">
-          <!-- JS 会动态渲染 List 分类按钮 -->
+    </div>
+    <div class="flex items-center gap-6">
+      <div class="flex flex-col items-end">
+        <span class="font-label-mono text-[12px] text-on-surface-variant" id="currentAccountBadge">当前：全部合并</span>
+        <div id="manualRefresh" class="flex items-center gap-1.5 text-primary cursor-pointer hover:opacity-80 transition-all scale-95 active:scale-90 select-none">
+          <span class="material-symbols-outlined text-sm">sync</span>
+          <span class="font-label-mono text-[11px] uppercase tracking-wider font-bold">手动同步</span>
         </div>
       </div>
-
-      <div class="filter-grid">
-        <div class="field">
-          <label class="label" for="lang">语言</label>
-          <select id="lang"><option value="">全部语言</option></select>
+      <div class="flex items-center gap-3">
+        <button id="expandAll" class="p-2 hover:text-primary transition-colors material-symbols-outlined hover:bg-white/5 rounded-lg" title="展开全部解读">bolt</button>
+        <button id="clearCredentials" class="p-2 hover:text-error transition-colors material-symbols-outlined hover:bg-white/5 rounded-lg" title="清除本地缓存">delete_sweep</button>
+        <div class="w-9 h-9 rounded-full border border-primary/30 p-0.5">
+          <img class="w-full h-full rounded-full object-cover" alt="User Profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0g69LB7-dId27Rn0UPeFycuznViAnGtVeRrYR3Gtgvo3rE4loGrJaWhMIYshPbR5qwbIpBNBxCvV1opVbsPvItf2Gs6Jl5BrKlQSsBg8rvxHTPfm91twy3cADnB99X11T6nSQ2kIeVgMcRpp4WltaQjMcmR6awYfH239EobrwLYSaFyJ8Cavm80lt9Av3C61gqPTe_vJOz3XGffIc5Qe0xwbOqRhIa64NI0m7dGGSbmTSfMoFmER8lzrwaKfLyN3CPf_gnQPZPb29"/>
         </div>
+      </div>
+    </div>
+  </header>
 
-        <div class="field">
-          <label class="label" for="topicFilter">主题</label>
-          <select id="topicFilter"><option value="">全部主题</option></select>
+  <!-- Live Sub-Status Bar -->
+  <div class="fixed top-[71px] w-full z-40 bg-background/80 backdrop-blur-md border-b border-white/5 px-container-padding-desktop py-2.5 flex items-center justify-between font-label-mono text-[11px] text-on-surface-variant/80">
+    <div class="flex items-center gap-6">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-primary" id="aiHealthDot"></span>
+        <span class="text-on-surface font-medium" id="aiHealthLabel">AI 监测中...</span>
+      </div>
+      <div class="flex items-center gap-4" id="liveStatus">
+        <span>最近更新: --:--:--</span>
+        <span class="text-secondary flex items-center gap-1">
+          自动刷新: 
+          <input type="checkbox" id="autoRefreshToggle" class="rounded w-3.5 h-3.5 bg-transparent border-white/30 text-secondary focus:ring-secondary" checked />
+        </span>
+        <span>下次刷新: --:--</span>
+        <span class="px-1.5 py-0.5 bg-white/5 rounded">空闲</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-6">
+      <div class="flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[13px]">speed</span>
+        <span id="rateLimitDetails">限流详情已就绪</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[13px]">analytics</span>
+        <span id="diffInfo">本次变化: +0 / -0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar Navigation -->
+  <nav class="fixed left-0 top-0 h-screen flex flex-col p-6 z-30 bg-surface-container-low/40 backdrop-blur-lg border-r border-white/5 w-64 pt-[124px]">
+    <div class="mb-6 flex-1 flex flex-col">
+      <h3 class="font-headline-md text-[11px] uppercase tracking-[0.2em] text-on-surface-variant/60 mb-3 px-2">GitHub Lists 分类</h3>
+      <div class="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-320px)] pr-1 py-1" id="githubListsContainer">
+        <!-- JS 动态注入分类按钮 -->
+      </div>
+    </div>
+    <div class="space-y-1 pt-4 border-t border-white/5">
+      <button id="collapseAll" class="w-full flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface transition-all font-label-mono text-sm hover:bg-white/5 rounded-lg">
+        <span class="material-symbols-outlined text-sm">unfold_less</span>
+        收起自动解读
+      </button>
+      <a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface transition-all font-label-mono text-sm hover:bg-white/5 rounded-lg" href="https://github.com/explore" target="_blank">
+        <span class="material-symbols-outlined text-sm">menu_book</span>
+        GitHub Explore
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="ml-64 pt-[132px] px-10 pb-24 flex-1">
+    <!-- KPI Metrics Row -->
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6" id="metricsBanner">
+      <!-- JS 动态注入指标卡，以保留同步数据逻辑 -->
+    </div>
+
+    <!-- Quick Navigation Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <button class="glass-panel p-4 rounded-xl flex flex-col items-start gap-2 hover:bg-secondary/5 border-l-4 border-l-secondary transition-all group cyber-glow-cyan" onclick="window.open('https://github.com/explore', '_blank')">
+        <div class="flex items-center gap-2 text-secondary">
+          <span class="material-symbols-outlined text-[18px]">explore</span>
+          <span class="font-bold text-sm">Explore</span>
         </div>
+        <span class="text-[11px] text-on-surface-variant">探索 GitHub 精彩开源项目</span>
+      </button>
+      <button class="glass-panel p-4 rounded-xl flex flex-col items-start gap-2 hover:bg-tertiary/5 border-l-4 border-l-tertiary transition-all group" onclick="document.getElementById('topicFilter').focus()">
+        <div class="flex items-center gap-2 text-tertiary">
+          <span class="material-symbols-outlined text-[18px]">tag</span>
+          <span class="font-bold text-sm">Topics</span>
+        </div>
+        <span class="text-[11px] text-on-surface-variant">快速选择特定技术领域</span>
+      </button>
+      <button class="glass-panel p-4 rounded-xl flex flex-col items-start gap-2 hover:bg-primary/5 border-l-4 border-l-primary transition-all group" onclick="window.open('https://github.com/trending', '_blank')">
+        <div class="flex items-center gap-2 text-primary">
+          <span class="material-symbols-outlined text-[18px]">local_fire_department</span>
+          <span class="font-bold text-sm">Trending</span>
+        </div>
+        <span class="text-[11px] text-on-surface-variant">发现社区最新热门趋势</span>
+      </button>
+      <button class="glass-panel p-4 rounded-xl flex flex-col items-start gap-2 hover:bg-white/5 border-l-4 border-l-white/30 transition-all group" onclick="window.scrollTo({top: document.getElementById('list').offsetTop - 140, behavior: 'smooth'})">
+        <div class="flex items-center gap-2 text-white">
+          <span class="material-symbols-outlined text-[18px]">bookmarks</span>
+          <span class="font-bold text-sm">Collections</span>
+        </div>
+        <span class="text-[11px] text-on-surface-variant">进入您的本地星标合集清单</span>
+      </button>
+    </div>
 
-        <div class="field">
-          <label class="label" for="updatedFilter">更新时间</label>
-          <select id="updatedFilter">
+    <!-- Insights Visualizations -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div class="glass-panel p-6 rounded-2xl h-80 lg:col-span-2">
+        <div class="flex justify-between items-center mb-4">
+          <div class="flex items-center gap-2">
+            <h4 class="font-headline-md text-base font-semibold">语言占比洞察</h4>
+            <span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] rounded font-label-mono">TOP 10</span>
+          </div>
+          <span class="font-label-mono text-[11px] text-on-surface-variant" id="languageInsight">加载中...</span>
+        </div>
+        <div class="w-full h-56" id="languageChart"></div>
+      </div>
+      <div class="glass-panel p-6 rounded-2xl h-80 flex flex-col">
+        <div class="flex justify-between items-center mb-3">
+          <h4 class="font-headline-md text-base font-semibold">热门主题分布</h4>
+          <span class="material-symbols-outlined text-on-surface-variant text-lg">analytics</span>
+        </div>
+        <div class="flex-1 overflow-y-auto topic-list space-y-2 pr-1" id="topicPanel">
+          <!-- JS 动态注入热门主题条形图 -->
+        </div>
+      </div>
+      <div class="glass-panel p-6 rounded-2xl h-80 lg:col-span-3">
+        <div class="flex justify-between items-center mb-4">
+          <h4 class="font-headline-md text-base font-semibold">月度活跃分布</h4>
+          <span class="px-2 py-0.5 bg-secondary/10 text-secondary text-[10px] rounded font-label-mono">Activity</span>
+        </div>
+        <div class="w-full h-56" id="activityChart"></div>
+      </div>
+    </div>
+
+    <!-- Filter Control Panel -->
+    <div class="glass-panel p-5 rounded-2xl mb-6 sticky top-[120px] z-20 shadow-xl flex flex-col gap-4">
+      <div class="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+        <div class="relative flex-1">
+          <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+          <input id="globalSearch" class="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-16 py-2.5 focus:ring-1 focus:ring-secondary focus:border-secondary outline-none font-body-md text-sm transition-all" placeholder="全局模糊匹配: 搜索仓库、owner、描述、主题... (按 '/' 聚焦)" type="text"/>
+          <kbd class="absolute right-4 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-white/10 rounded text-[10px] font-label-mono text-on-surface-variant">/</kbd>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- 维度过滤选择器 -->
+          <select id="lang" class="bg-white/5 border border-white/10 rounded-xl text-xs font-label-mono focus:ring-1 focus:ring-secondary focus:border-secondary p-2 pr-8 cursor-pointer text-on-surface outline-none">
+            <option value="">全部语言</option>
+          </select>
+          <select id="topicFilter" class="bg-white/5 border border-white/10 rounded-xl text-xs font-label-mono focus:ring-1 focus:ring-secondary focus:border-secondary p-2 pr-8 cursor-pointer text-on-surface outline-none">
+            <option value="">全部主题</option>
+          </select>
+          <select id="updatedFilter" class="bg-white/5 border border-white/10 rounded-xl text-xs font-label-mono focus:ring-1 focus:ring-secondary focus:border-secondary p-2 pr-8 cursor-pointer text-on-surface outline-none">
             <option value="">不限时间</option>
             <option value="month">最近一月</option>
             <option value="quarter">最近三月</option>
             <option value="year">最近一年</option>
           </select>
-        </div>
-
-        <div class="field">
-          <label class="label" for="starsFilter">Star 数</label>
-          <select id="starsFilter">
-            <option value="">不限</option>
+          <select id="starsFilter" class="bg-white/5 border border-white/10 rounded-xl text-xs font-label-mono focus:ring-1 focus:ring-secondary focus:border-secondary p-2 pr-8 cursor-pointer text-on-surface outline-none">
+            <option value="">不限 Star</option>
             <option value="0-100">0-100</option>
             <option value="100-1000">100-1000</option>
             <option value="1000+">1000+</option>
           </select>
-        </div>
-
-        <div class="field">
-          <label class="label" for="statusFilter">仓库状态</label>
-          <select id="statusFilter">
-            <option value="">全部</option>
-            <option value="active">活跃</option>
+          <select id="statusFilter" class="bg-white/5 border border-white/10 rounded-xl text-xs font-label-mono focus:ring-1 focus:ring-secondary focus:border-secondary p-2 pr-8 cursor-pointer text-on-surface outline-none">
+            <option value="">全部状态</option>
+            <option value="active">活跃仓库</option>
             <option value="archived">已归档</option>
           </select>
-        </div>
-
-        <div class="field">
-          <label class="label" for="descType">简介类型</label>
-          <select id="descType">
-            <option value="">全部</option>
+          <select id="descType" class="bg-white/5 border border-white/10 rounded-xl text-xs font-label-mono focus:ring-1 focus:ring-secondary focus:border-secondary p-2 pr-8 cursor-pointer text-on-surface outline-none">
+            <option value="">简介筛选</option>
             <option value="en">仅英文</option>
             <option value="zh">含中文</option>
-            <option value="empty">暂无</option>
+            <option value="empty">暂无简介</option>
           </select>
         </div>
       </div>
 
-      <div class="field">
-        <div class="toggle-field">
-          <label class="label" for="autoRefreshToggle">自动刷新</label>
-          <input id="autoRefreshToggle" type="checkbox" checked />
+      <!-- Sorting, Search Summary, and Filter Chips -->
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-2 border-t border-white/5">
+        <div class="flex items-center gap-2 overflow-x-auto py-1 max-w-full" id="filterChips">
+          <!-- JS 动态注入筛选条件芯片 -->
         </div>
-      </div>
-
-      <div class="button-row">
-        <button id="manualRefresh">刷新数据</button>
-        <button id="clearCredentials">清除缓存</button>
-      </div>
-
-      <div class="button-row">
-        <button id="expandAll">展开解读</button>
-        <button id="collapseAll">收起解读</button>
-      </div>
-      <p class="helper" id="sourceInfo" style="margin-top: 18px;">实时模式已启用</p>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div>
-          <h2 class="page-title">GitHub Star 仓库洞察</h2>
-          <p class="helper" id="filterSummary">当前：全部账号合并</p>
-        </div>
-        <div class="topbar-actions">
-          <div class="account-badge" id="currentAccountBadge">当前账号：全部账号合并</div>
-        </div>
-      </header>
-
-      <section class="status-grid">
-        <div class="status" id="liveStatus">最近更新: -- ｜ 下次刷新: --:-- ｜ 空闲</div>
-        <div class="status" style="display: flex; align-items: center; gap: 16px;">
-          <span id="diffInfo">本次变化: +0 / -0</span>
-          <span class="ai-health-indicator" id="aiHealthIndicator">
-            <span class="ai-health-dot checking" id="aiHealthDot"></span>
-            <span id="aiHealthLabel">AI 检测中...</span>
-          </span>
-        </div>
-      </section>
-
-      <nav class="neon-nav">
-        <a href="https://github.com/explore" target="_blank" rel="noopener noreferrer" class="neon-btn btn-explore" title="探索推荐">
-          <div class="neon-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></div>
-          <div>
-            <h3 class="title">Explore</h3>
-            <p class="subtitle">探索 · 个性化推荐</p>
-          </div>
-        </a>
-        <a href="https://github.com/topics" target="_blank" rel="noopener noreferrer" class="neon-btn btn-topics" title="按主题导航">
-          <div class="neon-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg></div>
-          <div>
-            <h3 class="title">Topics</h3>
-            <p class="subtitle">主题 · 按领域导航</p>
-          </div>
-        </a>
-        <a href="https://github.com/trending" target="_blank" rel="noopener noreferrer" class="neon-btn btn-trending" title="热榜趋势">
-          <div class="neon-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div>
-          <div>
-            <h3 class="title">Trending</h3>
-            <p class="subtitle">趋势 · 热榜发现 🔥</p>
-          </div>
-          <!-- <span class="badge-current">当前</span> -->
-        </a>
-        <a href="https://github.com/collections" target="_blank" rel="noopener noreferrer" class="neon-btn btn-collections" title="整理合集">
-          <div class="neon-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></div>
-          <div>
-            <h3 class="title">Collections</h3>
-            <p class="subtitle">合集 · 精选清单</p>
-          </div>
-        </a>
-      </nav>
-
-      <section class="metrics-banner" id="metricsBanner" aria-label="关键指标">
-        <!-- JS 会渲染指标 -->
-      </section>
-
-      <section class="charts" aria-label="兴趣结构">
-        <div class="panel">
-          <div class="panel-head"><h2>语言结构</h2><span class="tag">Top 10</span></div>
-          <div class="chart-box" id="languageChart"></div>
-          <p class="chart-note" id="languageInsight">正在生成洞察...</p>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><h2>热门主题</h2><span class="tag">Topics</span></div>
-          <div class="topic-list" id="topicPanel"></div>
-          <p class="chart-note">主题来自 GitHub topics，缺失时可用关键词和语言筛选。</p>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><h2>最近活跃</h2><span class="tag">12 months</span></div>
-          <div class="chart-box" id="activityChart"></div>
-          <p class="chart-note">按 starred_at 或 updated_at 聚合，帮助观察收藏节奏。</p>
-        </div>
-      </section>
-
-      <section class="panel list-panel">
-        <div class="error" id="errorInfo"></div>
-        <div class="list-toolbar">
-          <div>
-            <h2 class="list-title">仓库清单</h2>
-            <p class="helper" id="activeFilterSummary">你正在查看完整收藏。</p>
-          </div>
-          <div class="list-toolbar-controls">
-            <select id="sortBy" class="inline-control" aria-label="排序字段">
-              <option value="updatedAt">按更新时间</option>
-              <option value="stars">按 Star 数</option>
-              <option value="forks">按 Fork 数</option>
-              <option value="name">按名称</option>
+        <div class="flex items-center gap-4 ml-auto">
+          <div class="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
+            <span class="text-[11px] text-on-surface-variant font-label-mono">排序:</span>
+            <select id="sortBy" class="bg-transparent border-none text-xs font-label-mono focus:ring-0 p-0 pr-6 cursor-pointer text-on-surface outline-none">
+              <option value="updatedAt">更新时间</option>
+              <option value="stars">星标数</option>
+              <option value="forks">Fork数</option>
+              <option value="name">仓库名</option>
             </select>
-            <select id="sortOrder" class="inline-control" aria-label="排序方向">
-              <option value="desc">倒序</option>
-              <option value="asc">正序</option>
-            </select>
-            <div class="account-badge" id="resultCount">0 项</div>
           </div>
+          <!-- 排序顺序切换按钮 -->
+          <button id="sortOrderToggle" class="p-1.5 hover:bg-white/10 rounded-lg transition-all material-symbols-outlined text-on-surface-variant hover:text-on-surface" title="切换升降序">swap_vert</button>
+          <select id="sortOrder" style="display: none;">
+            <option value="desc">降序</option>
+            <option value="asc">升序</option>
+          </select>
+          <button id="resetFilters" class="text-[11px] font-label-mono text-on-surface-variant hover:text-primary transition-colors underline underline-offset-4">清除筛选</button>
         </div>
-        <div class="filter-chips" id="filterChips"></div>
-        <div class="skeleton-panel" id="listSkeleton">
-          <div class="skeleton-line" style="width: 38%"></div>
-          <div class="skeleton-line" style="width: 72%"></div>
-          <div class="skeleton-line" style="width: 56%"></div>
-        </div>
-        <div class="empty-state" id="emptyState">
-          <h2 class="list-title">没有仓库匹配当前筛选条件</h2>
-          <p class="helper">尝试清空搜索、放宽语言筛选范围，或重置全部筛选。</p>
-          <button id="resetFilters">重置筛选</button>
-        </div>
-        <div id="listWrap"><div id="list"></div></div>
-      </section>
-    </main>
-  </div>
+      </div>
+      <div class="text-[11px] font-label-mono text-on-surface-variant/70" id="activeFilterSummary">
+        综合搜索摘要将显示在此处
+      </div>
+    </div>
+
+    <!-- Error Banner -->
+    <div class="text-error font-label-mono text-xs px-2 mb-4" id="errorInfo"></div>
+
+    <!-- Repository Cards Grid Container -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" id="list">
+      <!-- JS 渲染仓库卡片 -->
+    </div>
+    
+    <!-- Empty State and Loading Skeleton in Grid -->
+    <div class="hidden py-20 text-center" id="emptyState">
+      <span class="material-symbols-outlined text-4xl text-on-surface-variant/30 mb-2">inbox</span>
+      <p class="font-label-mono text-sm text-on-surface-variant">暂无符合条件的仓库</p>
+    </div>
+    <div class="hidden grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" id="listSkeleton">
+      <div class="glass-panel p-6 rounded-2xl animate-pulse">
+        <div class="h-4 bg-white/5 w-1/4 rounded mb-4"></div>
+        <div class="h-6 bg-white/10 w-3/4 rounded mb-3"></div>
+        <div class="h-4 bg-white/5 w-full rounded mb-2"></div>
+        <div class="h-4 bg-white/5 w-5/6 rounded mb-6"></div>
+        <div class="h-8 bg-white/5 w-1/3 rounded"></div>
+      </div>
+      <div class="glass-panel p-6 rounded-2xl animate-pulse">
+        <div class="h-4 bg-white/5 w-1/4 rounded mb-4"></div>
+        <div class="h-6 bg-white/10 w-3/4 rounded mb-3"></div>
+        <div class="h-4 bg-white/5 w-full rounded mb-2"></div>
+        <div class="h-4 bg-white/5 w-5/6 rounded mb-6"></div>
+        <div class="h-8 bg-white/5 w-1/3 rounded"></div>
+      </div>
+      <div class="glass-panel p-6 rounded-2xl animate-pulse">
+        <div class="h-4 bg-white/5 w-1/4 rounded mb-4"></div>
+        <div class="h-6 bg-white/10 w-3/4 rounded mb-3"></div>
+        <div class="h-4 bg-white/5 w-full rounded mb-2"></div>
+        <div class="h-4 bg-white/5 w-5/6 rounded mb-6"></div>
+        <div class="h-8 bg-white/5 w-1/3 rounded"></div>
+      </div>
+    </div>
+  </main>
 
   <!-- Floating Batch Action Bar -->
-  <div class="batch-action-bar" id="batchActionBar">
-    <div class="batch-info">已选择 <span id="batchSelectedCount">0</span> 个仓库</div>
-    <div class="batch-actions" style="display: flex; align-items: center; gap: 12px;">
-      <select id="batchListSelect" style="width: 160px; min-height: 36px; height: 36px; padding: 0 8px; border-radius: 18px; font-size: 13px; background: var(--surface-raised); border: 1px solid var(--line); color: var(--text);">
-        <option value="">加入目标 List...</option>
-        <!-- JS will populate options here -->
-      </select>
-      <button class="batch-btn batch-btn-danger" id="batchUnstarBtn">批量取消 Star</button>
-      <button class="batch-btn batch-btn-secondary" id="batchClearBtn">取消选择</button>
+  <div class="fixed bottom-8 left-1/2 -translate-x-1/2 glass-panel px-8 py-3.5 rounded-2xl flex items-center gap-8 shadow-2xl transition-all duration-500 translate-y-32 opacity-0 z-50" id="batchActionBar">
+    <div class="flex items-center gap-3 pr-8 border-r border-white/10">
+      <span class="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-bold font-label-mono text-sm" id="batchSelectedCount">0</span>
+      <span class="font-label-mono text-sm">已选择仓库</span>
     </div>
-  </div>
-
-  <!-- AI Modal -->
-  <div class="ai-modal-overlay" id="aiModalOverlay">
-    <div class="ai-modal">
-      <div class="ai-modal-header">
-        <h3 id="aiModalTitle">✨ AI 引导</h3>
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <span id="aiModelBadge" class="ai-modal-badge" style="display: none;"></span>
-          <button id="aiModalClose" class="ai-modal-close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-        </div>
+    <div class="flex items-center gap-4">
+      <div class="relative flex items-center bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 hover:bg-white/10 transition-all">
+        <span class="material-symbols-outlined text-[18px] text-on-surface-variant mr-1">drive_file_move</span>
+        <select id="batchListSelect" class="bg-transparent border-none text-xs font-label-mono focus:ring-0 p-0 pr-6 cursor-pointer text-on-surface outline-none">
+          <option value="">移动到目标 List...</option>
+        </select>
       </div>
-      <div class="ai-modal-content" id="aiModalContent"></div>
+      <button id="batchUnstarBtn" class="flex items-center gap-2 px-4 py-1.5 text-error/80 hover:bg-error/10 rounded-lg transition-all font-label-mono text-sm border border-error/20 bg-error/5 hover:text-error">
+        <span class="material-symbols-outlined text-sm">heart_minus</span>
+        批量取消 Star (Unstar)
+      </button>
+      <button id="batchClearBtn" class="font-label-mono text-sm text-on-surface-variant hover:text-on-surface transition-all">取消选择</button>
     </div>
   </div>
 
-  <script src="./js/github-api.js"></script>
-  <script src="./js/security.js"></script>
-  <script src="./js/store.js"></script>
-  <script src="./js/refresh-controller.js"></script>
-  <script src="./js/insights.js"></script>
-  <script src="./js/view.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script>
-    // 配置 marked：安全模式，不允许 HTML 注入
-    if (window.marked) {
-      marked.setOptions({
-        breaks: true,       // 支持换行符转 <br>
-        gfm: true,          // GitHub Flavored Markdown
-        headerIds: false,
-      });
-    }
-  </script>
-  <script src="./js/app.js"></script>
+  <!-- AI Insights Modal Overlay -->
+  <div class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm transition-all" id="aiModalOverlay">
+    <div class="glass-panel w-11/12 max-w-2xl rounded-2xl border border-white/10 shadow-2xl flex flex-col max-h-[80vh] overflow-hidden">
+      <div class="flex justify-between items-center px-6 py-4 border-b border-white/10 bg-white/5">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-primary text-xl">magic_button</span>
+          <h3 class="font-headline-md text-base text-on-surface font-semibold" id="aiModalTitle">✨ AI 智能引导</h3>
+          <span class="text-[11px] font-label-mono px-2 py-0.5 bg-primary/10 border border-primary/20 text-primary rounded" id="aiModelBadge" style="display:none;"></span>
+        </div>
+        <button class="p-1 hover:bg-white/10 rounded-lg transition-colors material-symbols-outlined text-on-surface-variant hover:text-on-surface select-none outline-none" id="aiModalClose">close</button>
+      </div>
+      <div class="p-6 overflow-y-auto text-on-surface/90 font-body-md text-sm leading-relaxed" id="aiModalContent">
+        <!-- AI 流式加载打字机内容 -->
+      </div>
+    </div>
+  </div>
+
+  <script src="js/github-api.js"></script>
+  <script src="js/insights.js"></script>
+  <script src="js/security.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/refresh-controller.js"></script>
+  <script src="js/view.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

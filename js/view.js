@@ -67,14 +67,19 @@ function sortRepositories(repos, sorting) {
 
 function languageColor(language) {
   const colors = {
-    JavaScript: "#f4c95d",
-    TypeScript: "#6ca8ff",
-    Python: "#8bd17c",
-    Go: "#3dd6c6",
-    Rust: "#ff9b72",
-    Vue: "#42d392",
-    HTML: "#ff7a90",
-    CSS: "#b8a7ff"
+    JavaScript: "#f1e05a",
+    TypeScript: "#3178c6",
+    Python: "#3572A5",
+    Go: "#00ADD8",
+    Rust: "#dea584",
+    Vue: "#41b883",
+    HTML: "#e34c26",
+    CSS: "#563d7c",
+    C: "#555555",
+    "C++": "#f34b7d",
+    Java: "#b07219",
+    Ruby: "#701516",
+    Shell: "#89e051"
   };
   return colors[language] || "#a3aab5";
 }
@@ -85,8 +90,12 @@ function createView() {
   let expandZh = false;
 
   function ensureCharts() {
-    if (!languageChart) languageChart = echarts.init(document.getElementById("languageChart"));
-    if (!activityChart) activityChart = echarts.init(document.getElementById("activityChart"));
+    if (!languageChart) {
+      languageChart = echarts.init(document.getElementById("languageChart"));
+    }
+    if (!activityChart) {
+      activityChart = echarts.init(document.getElementById("activityChart"));
+    }
   }
 
   function getFilteredRepos(state) {
@@ -96,10 +105,15 @@ function createView() {
 
   function renderSelectOptions(selectId, rows, placeholder, currentValue) {
     const select = document.getElementById(selectId);
+    if (!select) return;
     const options = [`<option value="">${placeholder}</option>`];
-    for (const row of rows) options.push(`<option value="${escapeHtml(row.name)}">${escapeHtml(row.name)} (${row.value})</option>`);
+    for (const row of rows) {
+      options.push(`<option value="${escapeHtml(row.name)}">${escapeHtml(row.name)} (${row.value})</option>`);
+    }
     select.innerHTML = options.join("");
-    if ([...select.options].some((option) => option.value === currentValue)) select.value = currentValue;
+    if ([...select.options].some((option) => option.value === currentValue)) {
+      select.value = currentValue;
+    }
   }
 
   function renderFilterOptions(state) {
@@ -117,86 +131,108 @@ function createView() {
     const topLanguage = languageStats.length ? languageStats[0].name : "N/A";
     const topTopic = topicStats.length ? topicStats[0].name : "N/A";
     
-    document.getElementById("metricsBanner").innerHTML = `
-      <div class="metric-item">
-        <span class="metric-label">总仓库数</span>
-        <span class="metric-value highlight">${repos.length}</span>
+    const metricsBanner = document.getElementById("metricsBanner");
+    if (!metricsBanner) return;
+
+    metricsBanner.innerHTML = `
+      <div class="glass-panel p-4 rounded-xl flex flex-col gap-1 border-l-4 border-l-primary cyber-glow-green">
+        <span class="font-label-mono text-[11px] uppercase text-on-surface-variant tracking-wider">总仓库数</span>
+        <span class="font-metric-display text-2xl text-primary font-bold">${repos.length}</span>
       </div>
-      <div class="metric-item">
-        <span class="metric-label">当前筛选</span>
-        <span class="metric-value">${filtered.length}</span>
+      <div class="glass-panel p-4 rounded-xl flex flex-col gap-1 border-l-4 border-l-secondary">
+        <span class="font-label-mono text-[11px] uppercase text-on-surface-variant tracking-wider">当前筛选</span>
+        <span class="font-metric-display text-2xl text-secondary font-bold">${filtered.length}</span>
       </div>
-      <div class="metric-item">
-        <span class="metric-label">语言数</span>
-        <span class="metric-value">${languageStats.length}</span>
+      <div class="glass-panel p-4 rounded-xl flex flex-col gap-1 border-l-4 border-l-tertiary">
+        <span class="font-label-mono text-[11px] uppercase text-on-surface-variant tracking-wider">语言数量</span>
+        <span class="font-metric-display text-2xl text-tertiary font-bold">${languageStats.length}</span>
       </div>
-      <div class="metric-item">
-        <span class="metric-label">最热语言</span>
-        <span class="metric-value highlight">${escapeHtml(topLanguage)}</span>
+      <div class="glass-panel p-4 rounded-xl flex flex-col gap-1 border-l-4 border-l-primary">
+        <span class="font-label-mono text-[11px] uppercase text-on-surface-variant tracking-wider">最热语言</span>
+        <span class="font-metric-display text-2xl text-primary font-bold truncate" title="${escapeHtml(topLanguage)}">${escapeHtml(topLanguage)}</span>
       </div>
-      <div class="metric-item">
-        <span class="metric-label">最热主题</span>
-        <span class="metric-value">${escapeHtml(topTopic)}</span>
+      <div class="glass-panel p-4 rounded-xl flex flex-col gap-1 border-l-4 border-l-secondary">
+        <span class="font-label-mono text-[11px] uppercase text-on-surface-variant tracking-wider">最热主题</span>
+        <span class="font-metric-display text-2xl text-secondary font-bold truncate" title="${escapeHtml(topTopic)}">${escapeHtml(topTopic)}</span>
       </div>
-      <div class="metric-item">
-        <span class="metric-label">缺少简介</span>
-        <span class="metric-value" style="color: #ff0066">${missing}</span>
+      <div class="glass-panel p-4 rounded-xl flex flex-col gap-1 border-l-4 border-l-error">
+        <span class="font-label-mono text-[11px] uppercase text-on-surface-variant tracking-wider">缺少简介</span>
+        <span class="font-metric-display text-2xl text-error font-bold">${missing}</span>
       </div>
     `;
   }
 
   function renderCharts(state, filtered) {
     ensureCharts();
+    const chartTheme = {
+      textStyle: { fontFamily: 'Outfit', color: '#a2aab5' },
+      grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true }
+    };
+
     const languages = DashboardInsights.buildLanguageStats(filtered).slice(0, 10).reverse();
     const topLanguage = languages[languages.length - 1];
     const languageInsight = document.getElementById("languageInsight");
-    languageInsight.textContent = topLanguage
-      ? `当前结果中 ${topLanguage.name} 最多，共 ${topLanguage.value} 个仓库。`
-      : "暂无足够数据生成语言洞察。";
+    if (languageInsight) {
+      languageInsight.textContent = topLanguage
+        ? `${topLanguage.name} 最多，共 ${topLanguage.value} 个`
+        : "暂无洞察数据";
+    }
 
     languageChart.setOption({
+      ...chartTheme,
       backgroundColor: "transparent",
       tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
-      grid: { left: 108, right: 28, top: 18, bottom: 18 },
       xAxis: {
         type: "value",
-        axisLabel: { color: "#a3aab5", fontSize: 13 },
-        splitLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } }
+        axisLabel: { color: "#a2aab5" },
+        splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } }
       },
       yAxis: {
         type: "category",
         data: languages.map((item) => item.name),
-        axisLabel: { color: "#f3f4f6", fontSize: 13 }
+        axisLabel: { color: "#e3e2e8" }
       },
       series: [{
         type: "bar",
         data: languages.map((item) => item.value),
-        barWidth: 16,
-        itemStyle: { color: "#00f0ff", borderRadius: [0, 6, 6, 0] },
-        label: { show: true, position: "right", color: "#a3aab5", fontSize: 13 }
+        barWidth: 12,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: '#10b981' },
+            { offset: 1, color: '#4edea3' }
+          ]),
+          borderRadius: [0, 4, 4, 0]
+        }
       }]
     });
 
     const activity = DashboardInsights.getMonthlyActivity(filtered);
     activityChart.setOption({
+      ...chartTheme,
       backgroundColor: "transparent",
       tooltip: { trigger: "axis" },
-      grid: { left: 36, right: 16, top: 18, bottom: 42 },
       xAxis: {
         type: "category",
         data: activity.map((item) => item.name),
-        axisLabel: { color: "#a3aab5", fontSize: 13, rotate: 35 }
+        axisLabel: { color: "#a2aab5" }
       },
       yAxis: {
         type: "value",
-        axisLabel: { color: "#a3aab5", fontSize: 13 },
-        splitLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } }
+        axisLabel: { color: "#a2aab5" },
+        splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)" } }
       },
       series: [{
-        type: "bar",
+        type: "line",
+        smooth: true,
         data: activity.map((item) => item.value),
-        barWidth: 14,
-        itemStyle: { color: "#8bd17c", borderRadius: [6, 6, 0, 0] }
+        lineStyle: { color: '#4cd7f6', width: 2.5 },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(76, 215, 246, 0.25)' },
+            { offset: 1, color: 'transparent' }
+          ])
+        },
+        itemStyle: { color: '#4cd7f6' }
       }]
     });
   }
@@ -204,13 +240,20 @@ function createView() {
   function renderTopicPanel(filtered) {
     const topics = DashboardInsights.buildTopicStats(filtered).slice(0, 8);
     const max = Math.max(1, ...topics.map((topic) => topic.value));
-    document.getElementById("topicPanel").innerHTML = topics.length ? topics.map((topic) => `
-      <div class="topic-row">
-        <span>${escapeHtml(topic.name)}</span>
-        <span>${topic.value}</span>
-        <div class="topic-bar"><span style="width:${Math.max(8, (topic.value / max) * 100)}%"></span></div>
+    const topicPanel = document.getElementById("topicPanel");
+    if (!topicPanel) return;
+
+    topicPanel.innerHTML = topics.length ? topics.map((topic) => `
+      <div class="flex flex-col gap-1.5 text-xs text-on-surface-variant font-label-mono">
+        <div class="flex justify-between">
+          <span class="text-on-surface font-medium truncate max-w-[140px]">${escapeHtml(topic.name)}</span>
+          <span>${topic.value}</span>
+        </div>
+        <div class="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+          <div class="h-full bg-tertiary rounded-full shadow-[0_0_8px_rgba(208,188,255,0.4)]" style="width:${Math.max(8, (topic.value / max) * 100)}%"></div>
+        </div>
       </div>
-    `).join("") : '<p class="helper">当前结果没有 topic 数据。</p>';
+    `).join("") : '<p class="text-xs text-on-surface-variant/50 p-4">暂无热门主题</p>';
   }
 
   function renderFilterChips(state) {
@@ -227,36 +270,74 @@ function createView() {
       const listLabel = filters.list === "unclassified" ? "未分类" : `List: ${filters.list}`;
       labels.push(["list", listLabel]);
     }
-    document.getElementById("filterChips").innerHTML = labels.map(([key, label]) =>
-      `<button class="filter-chip" data-filter-key="${key}" title="移除此筛选">${escapeHtml(label)} ×</button>`
-    ).join("");
+    const container = document.getElementById("filterChips");
+    if (!container) return;
+
+    container.innerHTML = labels.map(([key, label]) => `
+      <div class="flex items-center gap-1.5 bg-secondary/10 border border-secondary/20 px-2.5 py-1 rounded-full text-secondary font-label-mono text-[11px] select-none">
+        <span>${escapeHtml(label)}</span>
+        <span class="material-symbols-outlined text-[13px] cursor-pointer hover:text-white" data-filter-key="${key}">close</span>
+      </div>
+    `).join("");
   }
 
   function renderStatus(state, filtered) {
-    const statusEl = document.getElementById("liveStatus");
+    const autoRefreshToggle = document.getElementById("autoRefreshToggle");
+    if (autoRefreshToggle) {
+      autoRefreshToggle.checked = !!state.autoRefreshEnabled;
+    }
+
     const autoRefreshText = state.autoRefreshEnabled ? "开" : "关";
     const nextRefreshText = state.autoRefreshEnabled ? formatCountdown(state.nextRefreshAt) : "已关闭";
-    const rateLimitText = Object.entries(state.rateLimitByAccount)
-      .map(([key, value]) => `${key}: ${value.remaining}/${value.limit}`)
-      .join(" | ");
-    statusEl.textContent = `最近更新: ${formatTime(state.lastUpdatedAt)} ｜ 自动刷新: ${autoRefreshText} ｜ 下次刷新: ${nextRefreshText} ｜ ${state.isLoading ? "正在刷新，旧数据保持可见" : "空闲"}${rateLimitText ? ` ｜ 限流: ${rateLimitText}` : ""}`;
-    document.getElementById("diffInfo").textContent = `本次变化: +${state.diffSummary.added} / -${state.diffSummary.removed}`;
-    const autoRefreshToggle = document.getElementById("autoRefreshToggle");
-    if (autoRefreshToggle) autoRefreshToggle.checked = !!state.autoRefreshEnabled;
-    const sourceInfo = document.getElementById("sourceInfo");
-    if (sourceInfo) sourceInfo.textContent = state.autoRefreshEnabled ? "自动刷新已启用" : "自动刷新已关闭";
+    
+    // Status Bar
+    const liveStatus = document.getElementById("liveStatus");
+    if (liveStatus) {
+      liveStatus.innerHTML = `
+        <span>最近更新: ${formatTime(state.lastUpdatedAt)}</span>
+        <span class="text-secondary flex items-center gap-1 select-none">
+          自动刷新: 
+          <input type="checkbox" id="autoRefreshToggle" class="rounded w-3.5 h-3.5 bg-transparent border-white/30 text-secondary focus:ring-secondary cursor-pointer" ${state.autoRefreshEnabled ? "checked" : ""} />
+        </span>
+        <span>下次刷新: ${nextRefreshText}</span>
+        <span class="px-1.5 py-0.5 bg-white/5 rounded">${state.isLoading ? "同步中..." : "空闲"}</span>
+      `;
+    }
 
+    // Rate limits details
+    const rateDetails = document.getElementById("rateLimitDetails");
+    if (rateDetails) {
+      const rateLimitText = Object.entries(state.rateLimitByAccount)
+        .map(([key, value]) => `${key}: ${value.remaining}/${value.limit}`)
+        .join(" | ");
+      rateDetails.textContent = rateLimitText ? `限流: ${rateLimitText}` : "速率详情已就绪";
+    }
+
+    // Diff summary
+    const diffInfo = document.getElementById("diffInfo");
+    if (diffInfo) {
+      diffInfo.innerHTML = `本次变化: <span class="text-primary font-bold">+${state.diffSummary.added}</span> / <span class="text-error font-bold">-${state.diffSummary.removed}</span>`;
+    }
+
+    // Head status
     let sourceLabel = "全部账号合并";
     if (state.activeSource.startsWith("account:")) {
       const accountId = state.activeSource.replace("account:", "");
       sourceLabel = state.accounts[accountId]?.label || accountId;
     }
-    document.getElementById("currentAccountBadge").textContent = `当前账号：${sourceLabel}`;
-    document.getElementById("filterSummary").textContent = `当前：${sourceLabel}`;
-    document.getElementById("activeFilterSummary").textContent = DashboardInsights.buildResultSummary(filtered, state.filters);
+    
+    const badge = document.getElementById("currentAccountBadge");
+    if (badge) badge.textContent = `当前：${sourceLabel}`;
+
+    const summary = document.getElementById("activeFilterSummary");
+    if (summary) {
+      summary.textContent = DashboardInsights.buildResultSummary(filtered, state.filters);
+    }
+
     const sortByEl = document.getElementById("sortBy");
-    const sortOrderEl = document.getElementById("sortOrder");
     if (sortByEl) sortByEl.value = state.sorting?.by || "updatedAt";
+
+    const sortOrderEl = document.getElementById("sortOrder");
     if (sortOrderEl) sortOrderEl.value = state.sorting?.order || "desc";
   }
 
@@ -267,15 +348,17 @@ function createView() {
     if (!container) return;
 
     const currentList = state.filters.list || "";
-
     const html = [];
     
     // 1. 全部 (All)
-    const allActive = currentList === "" ? "active" : "";
+    const allActive = currentList === "" ? "bg-primary-container text-on-primary-container font-bold" : "text-on-surface-variant hover:text-on-surface hover:bg-white/5";
     html.push(`
-      <button class="github-list-btn ${allActive}" data-list="">
-        <span>全部 (All)</span>
-        <span class="list-count">${stats.all}</span>
+      <button class="github-list-btn flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${allActive} w-full text-left" data-list="">
+        <span class="flex items-center gap-2.5">
+          <span class="material-symbols-outlined text-base">star</span>
+          <span>全部 (All)</span>
+        </span>
+        <span class="bg-black/25 px-2 py-0.5 rounded-full text-[10px] border border-white/5 font-label-mono">${stats.all}</span>
       </button>
     `);
 
@@ -293,47 +376,53 @@ function createView() {
     }
 
     for (const item of stats.lists) {
-      const active = currentList === item.name ? "active" : "";
+      const active = currentList === item.name ? "bg-primary-container text-on-primary-container font-bold" : "text-on-surface-variant hover:text-on-surface hover:bg-white/5";
       const nodeId = listNodeIds[item.name] || "";
       const accountId = listNodeAccounts[item.name] || "";
       
       html.push(`
-        <div class="github-list-btn-wrap" style="position: relative; width: 100%;">
-          <button class="github-list-btn ${active}" data-list="${escapeHtml(item.name)}" data-id="${nodeId}" data-account="${accountId}">
-            <span class="list-name-text">${escapeHtml(item.name)}</span>
-            <span class="list-count" style="margin-right: ${nodeId ? '44px' : '0'}">${item.value}</span>
-            ${nodeId ? `
-              <span class="list-meta-actions">
-                <button class="list-action-btn edit" data-id="${nodeId}" data-account="${accountId}" data-name="${escapeHtml(item.name)}" title="重命名 List">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                </button>
-                <button class="list-action-btn delete" data-id="${nodeId}" data-account="${accountId}" data-name="${escapeHtml(item.name)}" title="删除 List">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </button>
-              </span>
-            ` : ""}
+        <div class="github-list-btn-wrap group relative w-full">
+          <button class="github-list-btn flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${active} w-full text-left" data-list="${escapeHtml(item.name)}" data-id="${nodeId}" data-account="${accountId}">
+            <span class="flex items-center gap-2.5 truncate max-w-[130px]" title="${escapeHtml(item.name)}">
+              <span class="material-symbols-outlined text-base">folder_special</span>
+              <span class="truncate">${escapeHtml(item.name)}</span>
+            </span>
+            <span class="flex items-center gap-1.5 ml-auto">
+              <span class="bg-black/25 px-2 py-0.5 rounded-full text-[10px] border border-white/5 font-label-mono group-hover:opacity-0 transition-opacity">${item.value}</span>
+            </span>
           </button>
+          ${nodeId ? `
+            <div class="absolute right-2 top-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button class="list-action-btn edit text-on-surface-variant hover:text-primary p-0.5 rounded bg-black/30 hover:bg-black/50" data-id="${nodeId}" data-account="${accountId}" data-name="${escapeHtml(item.name)}" title="重命名 List">
+                <span class="material-symbols-outlined text-[14px]">edit</span>
+              </button>
+              <button class="list-action-btn delete text-on-surface-variant hover:text-error p-0.5 rounded bg-black/30 hover:bg-black/50" data-id="${nodeId}" data-account="${accountId}" data-name="${escapeHtml(item.name)}" title="删除 List">
+                <span class="material-symbols-outlined text-[14px]">delete</span>
+              </button>
+            </div>
+          ` : ""}
         </div>
       `);
     }
 
     // 3. 未分类 (Unclassified)
-    const uncActive = currentList === "unclassified" ? "active" : "";
+    const uncActive = currentList === "unclassified" ? "bg-primary-container text-on-primary-container font-bold" : "text-on-surface-variant hover:text-on-surface hover:bg-white/5";
     html.push(`
-      <button class="github-list-btn ${uncActive}" data-list="unclassified">
-        <span>未分类 (Unclassified)</span>
-        <span class="list-count">${stats.unclassified}</span>
+      <button class="github-list-btn flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${uncActive} w-full text-left" data-list="unclassified">
+        <span class="flex items-center gap-2.5">
+          <span class="material-symbols-outlined text-base">category</span>
+          <span>未分类 (Unclassified)</span>
+        </span>
+        <span class="bg-black/25 px-2 py-0.5 rounded-full text-[10px] border border-white/5 font-label-mono">${stats.unclassified}</span>
       </button>
     `);
 
     // 4. 新建 List 按钮
     html.push(`
-      <div class="add-list-section">
-        <button class="add-list-btn" id="addNewListBtn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          新建 List
-        </button>
-      </div>
+      <button id="addNewListBtn" class="w-full mt-3 py-2 px-4 bg-transparent border border-dashed border-primary/30 text-primary hover:bg-primary/5 rounded-xl font-label-mono text-[12px] transition-all flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined text-sm">add</span>
+        新建 List
+      </button>
     `);
 
     container.innerHTML = html.join("");
@@ -348,7 +437,8 @@ function createView() {
     const selectedCount = state.selectedRepoIds.length;
     if (selectedCount > 0) {
       countEl.textContent = selectedCount;
-      bar.classList.add("visible");
+      // Show batch action bar
+      bar.classList.remove("translate-y-32", "opacity-0");
 
       // Populate lists dropdown
       const uniqueLists = new Set();
@@ -361,28 +451,43 @@ function createView() {
         }
       }
 
-      const options = ['<option value="">加入目标 List...</option>'];
+      const options = ['<option value="">移动到目标 List...</option>'];
       for (const listName of [...uniqueLists].sort()) {
         options.push(`<option value="${escapeHtml(listName)}">${escapeHtml(listName)}</option>`);
       }
       select.innerHTML = options.join("");
     } else {
-      bar.classList.remove("visible");
+      // Hide batch action bar
+      bar.classList.add("translate-y-32", "opacity-0");
     }
   }
 
   function renderList(state, filtered) {
-    document.getElementById("resultCount").textContent = `${filtered.length} 项`;
     const emptyState = document.getElementById("emptyState");
     const skeleton = document.getElementById("listSkeleton");
     const list = document.getElementById("list");
-    const shouldShowSkeleton = state.isLoading && !sourceRepos(state).length;
-    skeleton.classList.toggle("visible", shouldShowSkeleton);
-    emptyState.classList.toggle("visible", !shouldShowSkeleton && !filtered.length);
+    if (!list || !skeleton || !emptyState) return;
 
-    if (shouldShowSkeleton || !filtered.length) {
+    const shouldShowSkeleton = state.isLoading && !sourceRepos(state).length;
+    
+    // Toggle skeletal templates
+    if (shouldShowSkeleton) {
+      skeleton.classList.add("grid");
+      skeleton.classList.remove("hidden");
+      emptyState.classList.add("hidden");
       list.innerHTML = "";
       return;
+    } else {
+      skeleton.classList.add("hidden");
+      skeleton.classList.remove("grid");
+    }
+
+    if (!filtered.length) {
+      emptyState.classList.remove("hidden");
+      list.innerHTML = "";
+      return;
+    } else {
+      emptyState.classList.add("hidden");
     }
 
     list.innerHTML = filtered.map((repo) => {
@@ -393,28 +498,46 @@ function createView() {
       const isSelected = state.selectedRepoIds.includes(repo.id);
       
       return `
-        <article class="repo-card ${expandZh ? "expanded" : ""} ${isSelected ? "selected" : ""}" draggable="true" data-id="${repo.id}">
-          <div class="repo-select-container">
-            <input type="checkbox" class="repo-checkbox" ${isSelected ? "checked" : ""} data-id="${repo.id}" />
-          </div>
-          <div class="repo-card-content">
-            <div>
-              <h3 class="repo-title"><a href="${escapeHtml(repo.url || repo.htmlUrl || "#")}" target="_blank" rel="noopener noreferrer"><span class="repo-owner">${escapeHtml(owner)}/</span>${escapeHtml(name)}</a></h3>
-              <p class="repo-desc">${escapeHtml(repo.description || "暂无简介")}</p>
-              ${descriptionKind === "en" ? `<div class="repo-desc-cn"><strong>自动解读：</strong>${escapeHtml(DashboardInsights.zhAuto(repo.description))}</div>` : ""}
-              <div class="repo-topics">
-                ${repoLists.map((listName) => `<span class="repo-list-tag">${escapeHtml(listName)}</span>`).join("")}
-                ${topics.map((topic) => `<span class="repo-topic">${escapeHtml(topic)}</span>`).join("")}
-                ${descriptionKind === "empty" ? '<span class="repo-topic">暂无简介</span>' : ""}
-              </div>
-              <button class="ai-guide-btn" data-repo="${escapeHtml(owner)}/${escapeHtml(name)}" data-desc="${escapeHtml(repo.description || '')}" data-panel-id="ai-panel-${escapeHtml(owner)}-${escapeHtml(name)}">✨ AI 引导</button>
+        <article class="repo-card glass-panel p-6 rounded-2xl cursor-grab active:cursor-grabbing border-t-2 border-t-transparent hover:border-t-primary ${isSelected ? "selected" : ""}" draggable="true" data-id="${repo.id}">
+          <div class="flex justify-between items-start mb-4">
+            <input type="checkbox" class="repo-checkbox rounded border-white/20 bg-transparent text-primary focus:ring-primary w-4 h-4 cursor-pointer" ${isSelected ? "checked" : ""} data-id="${repo.id}" />
+            <div class="flex items-center gap-1.5 text-on-surface-variant font-label-mono text-xs">
+              <span class="material-symbols-outlined text-[16px] text-amber">star</span>
+              <span>${Number(repo.stars || 0).toLocaleString("zh-CN")}</span>
+              <span class="mx-1 text-white/10">|</span>
+              <span class="material-symbols-outlined text-[16px]">fork_left</span>
+              <span>${Number(repo.forks || 0).toLocaleString("zh-CN")}</span>
             </div>
-            <aside class="repo-side">
-              <span class="repo-language"><span class="language-dot" style="background:${languageColor(repo.language)}"></span>${escapeHtml(repo.language || "Others")}</span>
-              <span class="repo-meta">★ ${Number(repo.stars || 0).toLocaleString("zh-CN")} ｜ Fork ${Number(repo.forks || 0).toLocaleString("zh-CN")}</span>
-              <span class="repo-meta">${formatDate(repo.updatedAt || repo.updated_at)}</span>
-              ${repo.archived ? '<span class="repo-topic">已归档</span>' : ""}
-            </aside>
+          </div>
+          <h3 class="font-headline-md text-base mb-2 text-on-surface font-semibold hover:text-primary transition-colors">
+            <a href="${escapeHtml(repo.url || repo.htmlUrl || "#")}" target="_blank" rel="noopener noreferrer"><span class="text-on-surface-variant font-normal">${escapeHtml(owner)}/</span>${escapeHtml(name)}</a>
+          </h3>
+          <p class="font-body-md text-on-surface-variant text-xs mb-4 line-clamp-2 min-h-[32px]">${escapeHtml(repo.description || "暂无简介")}</p>
+          ${descriptionKind === "en" ? `
+            <div class="repo-desc-cn text-xs border-l-2 border-l-secondary bg-secondary/5 px-3 py-2 rounded-r-lg text-secondary/90 font-body-md mb-4 leading-relaxed ${expandZh ? "block" : "hidden"}">
+              <strong>自动解读：</strong>${escapeHtml(DashboardInsights.zhAuto(repo.description))}
+            </div>
+          ` : ""}
+          
+          <div class="flex flex-wrap gap-1.5 mb-5">
+            ${repoLists.map((listName) => `<span class="px-2 py-0.5 bg-tertiary/10 border border-tertiary/20 rounded-md text-[10px] font-medium text-tertiary font-label-mono">${escapeHtml(listName)}</span>`).join("")}
+            ${topics.map((topic) => `<span class="px-2 py-0.5 bg-white/5 border border-white/10 rounded-md text-[10px] font-medium text-on-surface-variant/80 font-label-mono">${escapeHtml(topic)}</span>`).join("")}
+            ${descriptionKind === "empty" ? '<span class="px-2 py-0.5 bg-white/5 border border-white/10 rounded-md text-[10px] font-medium text-on-surface-variant/50">暂无简介</span>' : ""}
+            ${repo.archived ? '<span class="px-2 py-0.5 bg-error/10 border border-error/20 rounded-md text-[10px] font-medium text-error font-label-mono">已归档</span>' : ""}
+          </div>
+          
+          <div class="flex items-center justify-between pt-3 border-t border-white/5">
+            <span class="flex items-center gap-1.5 text-xs text-on-surface-variant">
+              <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${languageColor(repo.language)}"></span>
+              <span class="font-label-mono">${escapeHtml(repo.language || "Others")}</span>
+            </span>
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] font-label-mono text-on-surface-variant/50">${formatDate(repo.updatedAt || repo.updated_at)}</span>
+              <button class="ai-guide-btn px-2.5 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-lg text-xs font-bold hover:bg-primary/20 transition-all flex items-center gap-1 shadow-sm active:scale-95 select-none" data-repo="${escapeHtml(owner)}/${escapeHtml(name)}" data-desc="${escapeHtml(repo.description || '')}">
+                <span class="material-symbols-outlined text-[13px]">magic_button</span>
+                AI 引导
+              </button>
+            </div>
           </div>
         </article>
       `;

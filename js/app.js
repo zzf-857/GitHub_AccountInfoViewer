@@ -217,12 +217,22 @@ async function bootstrap() {
     document.getElementById("sortOrder").addEventListener("change", (e) => {
       store.patch({ sorting: { ...store.getState().sorting, order: e.target.value } });
     });
+    document.getElementById("sortOrderToggle").addEventListener("click", () => {
+      const state = store.getState();
+      const currentOrder = state.sorting?.order || "desc";
+      const nextOrder = currentOrder === "desc" ? "asc" : "desc";
+      store.patch({ sorting: { ...state.sorting, order: nextOrder } });
+    });
     document.getElementById("source").addEventListener("change", (e) => store.patch({ activeSource: e.target.value }));
-    document.getElementById("autoRefreshToggle").addEventListener("change", (e) => {
-      const enabled = !!e.target.checked;
-      store.patch({ autoRefreshEnabled: enabled });
-      if (enabled) refresher.start();
-      else refresher.stop();
+    
+    // 自动刷新事件委托，防止 innerHTML 重绘导致事件丢失
+    document.getElementById("liveStatus").addEventListener("change", (e) => {
+      if (e.target && e.target.id === "autoRefreshToggle") {
+        const enabled = !!e.target.checked;
+        store.patch({ autoRefreshEnabled: enabled });
+        if (enabled) refresher.start();
+        else refresher.stop();
+      }
     });
     document.getElementById("manualRefresh").addEventListener("click", () => refresher.trigger("manual"));
     document.getElementById("clearCredentials").addEventListener("click", () => {
@@ -271,19 +281,19 @@ async function bootstrap() {
         const data = await resp.json();
         if (data.ok) {
           aiOnline = true;
-          dot.className = "ai-health-dot online";
+          dot.className = "w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(78,222,163,0.5)]";
           label.textContent = `${data.model} 在线`;
-          label.style.color = "#22c55e";
+          label.style.color = "#4edea3";
         } else {
           aiOnline = false;
-          dot.className = "ai-health-dot offline";
+          dot.className = "w-2 h-2 rounded-full bg-error shadow-[0_0_8px_rgba(239,68,68,0.5)]";
           label.textContent = `离线: ${data.message}`;
           label.style.color = "#ef4444";
           document.querySelectorAll(".ai-guide-btn").forEach(b => b.classList.add("ai-offline"));
         }
       } catch (err) {
         aiOnline = false;
-        dot.className = "ai-health-dot offline";
+        dot.className = "w-2 h-2 rounded-full bg-error shadow-[0_0_8px_rgba(239,68,68,0.5)]";
         label.textContent = "连接失败";
         label.style.color = "#ef4444";
         document.querySelectorAll(".ai-guide-btn").forEach(b => b.classList.add("ai-offline"));
