@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Starred Intelligence | GitHub 生态管理</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+        :root {
+            --obsidian: #0b0c10;
+            --glass-bg: rgba(22, 27, 34, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background-color: var(--obsidian);
+            color: #e3e2e8;
+            overflow-x: hidden;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+        }
+
+        .cyber-glow-green:hover {
+            box-shadow: 0 0 15px rgba(78, 222, 163, 0.2);
+            border-color: rgba(78, 222, 163, 0.4);
+        }
+
+        .cyber-glow-cyan:focus-within {
+            box-shadow: 0 0 20px rgba(76, 215, 246, 0.15);
+            border-color: rgba(76, 215, 246, 0.5);
+        }
+
+        .drag-over {
+            transform: scale(1.02) translateX(4px);
+            background: rgba(78, 222, 163, 0.1) !important;
+            border-color: #4edea3 !important;
+        }
+
+        .lasso-selection {
+            position: fixed;
+            border: 1px solid #4cd7f6;
+            background: rgba(76, 215, 246, 0.1);
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .repo-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .repo-card:hover {
+            transform: translateY(-4px);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#1a1b20",
+                        "surface-container-high": "#292a2e",
+                        "background": "#121317",
+                        "secondary": "#4cd7f6",
+                        "primary": "#4edea3",
+                        "on-surface": "#e3e2e8",
+                        "on-surface-variant": "#bbcabf",
+                        "primary-container": "#10b981",
+                        "on-primary-container": "#00422b",
+                        "tertiary": "#d0bcff",
+                        "secondary-container": "#03b5d3"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-padding-mobile": "20px",
+                        "card-gap": "16px",
+                        "container-padding-desktop": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-xl": ["Outfit"],
+                        "body-lg": ["Outfit"],
+                        "label-mono": ["Geist Mono"],
+                        "metric-display": ["Geist Mono"],
+                        "headline-lg": ["Outfit"],
+                        "body-md": ["Outfit"],
+                        "headline-md": ["Outfit"]
+                    },
+                    "fontSize": {
+                        "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-mono": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "metric-display": ["20px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="dark bg-background text-on-surface">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-container-padding-desktop py-4 glass-panel border-b border-white/10 bg-background/70 backdrop-blur-xl shadow-sm">
+<div class="flex items-center gap-8">
+<span class="font-headline-md text-headline-md font-bold text-primary">Starred Intelligence</span>
+<div class="hidden md:flex items-center gap-4 bg-white/5 px-4 py-2 rounded-lg border border-white/10 cyber-glow-cyan transition-all">
+<span class="material-symbols-outlined text-secondary text-sm">account_tree</span>
+<span class="font-label-mono text-label-mono text-on-surface">组织：Meta 开源</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-secondary">expand_more</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex flex-col items-end">
+<span class="font-label-mono text-label-mono text-on-surface-variant">速率限制: 4920/5000</span>
+<div class="flex items-center gap-2 text-primary cursor-pointer hover:opacity-80 transition-all scale-95 active:opacity-80">
+<span class="material-symbols-outlined text-sm">sync</span>
+<span class="font-label-mono text-[12px] uppercase tracking-wider font-bold">手动同步</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 hover:text-primary transition-colors material-symbols-outlined">bolt</button>
+<button class="p-2 hover:text-primary transition-colors material-symbols-outlined">delete_sweep</button>
+<div class="w-10 h-10 rounded-full border border-primary/30 p-0.5">
+<img class="w-full h-full rounded-full object-cover" data-alt="A professional high-fidelity 3D avatar profile picture of a tech lead with glowing cybernetic elements, set against a dark obsidian background with teal accents, maintaining a minimalist and high-end tech aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0g69LB7-dId27Rn0UPeFycuznViAnGtVeRrYR3Gtgvo3rE4loGrJaWhMIYshPbR5qwbIpBNBxCvV1opVbsPvItf2Gs6Jl5BrKlQSsBg8rvxHTPfm91twy3cADnB99X11T6nSQ2kIeVgMcRpp4WltaQjMcmR6awYfH239EobrwLYSaFyJ8Cavm80lt9Av3C61gqPTe_vJOz3XGffIc5Qe0xwbOqRhIa64NI0m7dGGSbmTSfMoFmER8lzrwaKfLyN3CPf_gnQPZPb29"/>
+</div>
+</div>
+</div>
+</header><div class="fixed top-[73px] w-full z-40 bg-surface-container-lowest/80 backdrop-blur-md border-b border-white/5 px-container-padding-desktop py-2 flex items-center justify-between font-label-mono text-[11px] text-on-surface-variant/70">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-on-surface">mimo-v2.5-pro 在线</span>
+</div>
+<div class="flex items-center gap-4">
+<span>最近更新: 15:58:49</span>
+<span class="text-secondary">自动刷新: 开</span>
+<span>下次刷新: 01:10</span>
+<span class="px-2 py-0.5 bg-white/5 rounded">空闲</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]">speed</span>
+<span>限流: account1: 4989/5000 | account2: 4975/5000</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]">analytics</span>
+<span>本次变化: <span class="text-primary">+0</span> / <span class="text-error">-0</span></span>
+</div>
+</div>
+</div>
+<!-- Sidebar Navigation -->
+<nav class="fixed left-0 top-0 h-screen flex flex-col p-6 z-40 bg-surface-container-low/50 backdrop-blur-lg border-r border-white/10 w-64 pt-24">
+<div class="mb-8">
+<h3 class="font-headline-md text-sm uppercase tracking-[0.2em] text-on-surface-variant/50 mb-4 px-2">全局概览</h3>
+<div class="flex items-center gap-3 px-2 mb-6">
+<div class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(78,222,163,0.5)]"></div>
+<span class="font-body-md text-body-md font-bold">1,248 个仓库</span>
+</div>
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-3 py-2.5 bg-primary-container text-on-primary-container rounded-lg font-bold transition-all translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-mono text-label-mono">所有收藏</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">category</span>
+<span class="font-label-mono text-label-mono">未分类</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined">folder_special</span>
+<span class="font-label-mono text-label-mono">自定义列表</span>
+<span class="ml-auto material-symbols-outlined text-sm opacity-0 group-hover:opacity-100">chevron_right</span>
+</a>
+</li>
+</ul>
+</div>
+<button class="w-full py-3 px-4 bg-transparent border border-primary/50 text-primary hover:bg-primary/10 rounded-xl font-label-mono text-label-mono transition-all flex items-center justify-center gap-2 mb-auto">
+<span class="material-symbols-outlined text-sm">add</span>
+            + 新建列表
+        </button>
+<div class="space-y-1 pt-6 border-t border-white/5">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface transition-all font-label-mono text-sm" href="#">
+<span class="material-symbols-outlined text-sm">settings</span>
+                设置
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface transition-all font-label-mono text-sm" href="#">
+<span class="material-symbols-outlined text-sm">menu_book</span>
+                文档
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-64 pt-28 px-10 pb-24">
+<!-- KPI Metrics Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-8">
+<div class="glass-panel p-6 rounded-2xl flex flex-col gap-2 cyber-glow-green border-l-4 border-l-primary">
+<span class="font-label-mono text-[12px] uppercase text-on-surface-variant tracking-widest">收藏总数</span>
+<span class="font-metric-display text-4xl text-primary">1,248</span>
+<span class="text-[10px] text-primary/60 font-label-mono">自上次同步 +12.4%</span>
+</div>
+<div class="glass-panel p-6 rounded-2xl flex flex-col gap-2 border-l-4 border-l-secondary">
+<span class="font-label-mono text-[12px] uppercase text-on-surface-variant tracking-widest">语言分布</span>
+<span class="font-metric-display text-4xl text-secondary">24</span>
+<span class="text-[10px] text-secondary/60 font-label-mono">主要为 TypeScript/Python</span>
+</div>
+<div class="glass-panel p-6 rounded-2xl flex flex-col gap-2 border-l-4 border-l-tertiary">
+<span class="font-label-mono text-[12px] uppercase text-on-surface-variant tracking-widest">最热主题</span>
+<span class="font-metric-display text-4xl text-tertiary">React</span>
+<span class="text-[10px] text-tertiary/60 font-label-mono">342 个仓库匹配</span>
+</div>
+</div><div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+<button class="glass-panel p-4 rounded-2xl flex flex-col items-start gap-2 hover:bg-secondary/10 border-l-4 border-l-secondary transition-all group">
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-bold">Explore</span>
+</div>
+<span class="text-[12px] text-on-surface-variant">个性化推荐</span>
+</button>
+<button class="glass-panel p-4 rounded-2xl flex flex-col items-start gap-2 hover:bg-tertiary/10 border-l-4 border-l-tertiary transition-all group">
+<div class="flex items-center gap-2 text-tertiary">
+<span class="material-symbols-outlined">tag</span>
+<span class="font-bold">Topics</span>
+</div>
+<span class="text-[12px] text-on-surface-variant">按领域导航</span>
+</button>
+<button class="glass-panel p-4 rounded-2xl flex flex-col items-start gap-2 hover:bg-primary/10 border-l-4 border-l-primary transition-all group">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined">local_fire_department</span>
+<span class="font-bold">Trending</span>
+</div>
+<span class="text-[12px] text-on-surface-variant">趋势·热榜发现</span>
+</button>
+<button class="glass-panel p-4 rounded-2xl flex flex-col items-start gap-2 hover:bg-secondary-container/10 border-l-4 border-l-secondary-container transition-all group">
+<div class="flex items-center gap-2 text-secondary-container">
+<span class="material-symbols-outlined">bookmarks</span>
+<span class="font-bold">Collections</span>
+</div>
+<span class="text-[12px] text-on-surface-variant">合集·精选清单</span>
+</button>
+</div>
+<!-- Insights Section -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-gutter mb-12">
+<div class="glass-panel p-6 rounded-2xl h-80">
+<div class="flex justify-between items-center mb-6">
+<h4 class="font-headline-md text-lg">语言分布图</h4><span class="ml-2 px-2 py-0.5 bg-primary/10 text-primary text-[10px] rounded font-label-mono">TOP 10</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">more_vert</span>
+</div>
+<div class="w-full h-56" id="languageChart"></div>
+</div>
+<div class="glass-panel p-6 rounded-2xl h-80">
+<div class="flex justify-between items-center mb-6">
+<h4 class="font-headline-md text-lg">月度活跃度</h4><div class="flex items-center gap-2 ml-2">
+<span class="px-2 py-0.5 bg-secondary/10 text-secondary text-[10px] rounded font-label-mono">TOPICS</span>
+<select class="bg-transparent border-none text-[10px] text-on-surface-variant focus:ring-0 p-0 cursor-pointer">
+<option>12 months</option>
+<option>6 months</option>
+</select>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">more_vert</span>
+</div>
+<div class="w-full h-56" id="activityChart"></div>
+</div>
+</div>
+<!-- Filter Bar -->
+<div class="glass-panel p-4 rounded-2xl mb-8 sticky top-[92px] z-30 shadow-xl flex flex-col gap-4">
+<div class="flex items-center gap-4">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3 focus:ring-1 focus:ring-secondary focus:border-secondary outline-none font-body-md transition-all" placeholder="搜索仓库... (按 '/' 聚焦)" type="text"/>
+<kbd class="absolute right-4 top-1/2 -translate-y-1/2 px-2 py-1 bg-white/10 rounded text-[10px] font-label-mono text-on-surface-variant">CMD + K</kbd>
+</div>
+<div class="flex items-center gap-2"><div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/10">
+<span class="text-[12px] text-on-surface-variant">排序:</span>
+<select class="bg-transparent border-none text-sm font-label-mono focus:ring-0 p-0 cursor-pointer">
+<option>按更新时间</option>
+<option>按星标数</option>
+</select>
+</div>
+<button class="p-2 hover:bg-white/10 rounded-lg transition-all material-symbols-outlined text-on-surface-variant">swap_vert</button>
+<div class="h-8 w-[1px] bg-white/10 mx-2"></div>
+<span class="font-label-mono text-sm text-on-surface-variant">244 项</span>
+</div></div>
+</div>
+<div class="flex items-center gap-2 overflow-x-auto pb-1">
+<span class="text-[10px] uppercase font-bold text-on-surface-variant/50 tracking-widest mr-2">当前筛选:</span>
+<div class="flex items-center gap-2 bg-secondary/10 border border-secondary/20 px-3 py-1 rounded-full text-secondary font-label-mono text-[12px]">
+                    语言：Python
+                    <span class="material-symbols-outlined text-[14px] cursor-pointer">close</span>
+</div>
+<div class="flex items-center gap-2 bg-primary/10 border border-primary/20 px-3 py-1 rounded-full text-primary font-label-mono text-[12px]">
+                    Star数：&gt; 10k
+                    <span class="material-symbols-outlined text-[14px] cursor-pointer">close</span>
+</div>
+<button class="text-[11px] font-label-mono text-on-surface-variant hover:text-on-surface ml-2 underline underline-offset-4">清除全部</button>
+</div>
+</div>
+<!-- Repository Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-gutter" id="repo-grid">
+<!-- Repo Card 1 -->
+<div class="repo-card glass-panel p-6 rounded-2xl cursor-grab active:cursor-grabbing border-t-2 border-t-transparent hover:border-t-primary" draggable="true">
+<div class="flex justify-between items-start mb-4">
+<input class="rounded border-white/20 bg-transparent text-primary focus:ring-primary" type="checkbox"/>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">star</span>
+<span class="font-label-mono text-sm">224k</span>
+</div>
+</div>
+<h3 class="font-headline-md text-lg mb-2 text-on-surface group hover:text-primary transition-colors cursor-pointer">facebook/react</h3>
+<p class="font-body-md text-on-surface-variant text-sm mb-6 line-clamp-2">A JavaScript library for building user interfaces. The industry standard for component-based UI development.</p>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-[#f1e05a]"></div>
+<span class="font-label-mono text-[12px]">JavaScript</span>
+</div>
+</div>
+<button class="px-3 py-1.5 bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-lg text-[12px] font-bold hover:bg-tertiary/20 transition-all flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">magic_button</span>
+                        AI 引导
+                    </button>
+</div>
+</div>
+<!-- Repo Card 2 -->
+<div class="repo-card glass-panel p-6 rounded-2xl cursor-grab active:cursor-grabbing border-t-2 border-t-transparent hover:border-t-secondary" draggable="true">
+<div class="flex justify-between items-start mb-4">
+<input class="rounded border-white/20 bg-transparent text-secondary focus:ring-secondary" type="checkbox"/>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">star</span>
+<span class="font-label-mono text-sm">186k</span>
+</div>
+</div>
+<h3 class="font-headline-md text-lg mb-2 text-on-surface">pallets/flask</h3>
+<p class="font-body-md text-on-surface-variant text-sm mb-6 line-clamp-2">The Python micro framework for building web applications and RESTful APIs with minimal overhead.</p>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-[#3572A5]"></div>
+<span class="font-label-mono text-[12px]">Python</span>
+</div>
+</div>
+<button class="px-3 py-1.5 bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-lg text-[12px] font-bold hover:bg-tertiary/20 transition-all flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">magic_button</span>
+                        AI 引导
+                    </button>
+</div>
+</div>
+<!-- Repo Card 3 -->
+<div class="repo-card glass-panel p-6 rounded-2xl cursor-grab active:cursor-grabbing border-t-2 border-t-transparent hover:border-t-primary" draggable="true">
+<div class="flex justify-between items-start mb-4">
+<input class="rounded border-white/20 bg-transparent text-primary focus:ring-primary" type="checkbox"/>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">star</span>
+<span class="font-label-mono text-sm">45k</span>
+</div>
+</div>
+<h3 class="font-headline-md text-lg mb-2 text-on-surface">shadcn/ui</h3>
+<p class="font-body-md text-on-surface-variant text-sm mb-6 line-clamp-2">Beautifully designed components that you can copy and paste into your apps. Accessible, customizable, open source.</p>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-[#3178c6]"></div>
+<span class="font-label-mono text-[12px]">TypeScript</span>
+</div>
+</div>
+<button class="px-3 py-1.5 bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-lg text-[12px] font-bold hover:bg-tertiary/20 transition-all flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">magic_button</span>
+                        AI 引导
+                    </button>
+</div>
+</div>
+<!-- Repo Card 4 -->
+<div class="repo-card glass-panel p-6 rounded-2xl cursor-grab active:cursor-grabbing border-t-2 border-t-transparent hover:border-t-secondary" draggable="true">
+<div class="flex justify-between items-start mb-4">
+<input class="rounded border-white/20 bg-transparent text-secondary focus:ring-secondary" type="checkbox"/>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">star</span>
+<span class="font-label-mono text-sm">112k</span>
+</div>
+</div>
+<h3 class="font-headline-md text-lg mb-2 text-on-surface">d3/d3</h3>
+<p class="font-body-md text-on-surface-variant text-sm mb-6 line-clamp-2">Bring data to life with SVG, Canvas and HTML. A powerful visualization engine for the web.</p>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-[#f1e05a]"></div>
+<span class="font-label-mono text-[12px]">JavaScript</span>
+</div>
+</div>
+<button class="px-3 py-1.5 bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-lg text-[12px] font-bold hover:bg-tertiary/20 transition-all flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">magic_button</span>
+                        AI 引导
+                    </button>
+</div>
+</div>
+<!-- Repo Card 5 -->
+<div class="repo-card glass-panel p-6 rounded-2xl cursor-grab active:cursor-grabbing border-t-2 border-t-transparent hover:border-t-primary" draggable="true">
+<div class="flex justify-between items-start mb-4">
+<input class="rounded border-white/20 bg-transparent text-primary focus:ring-primary" type="checkbox"/>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">star</span>
+<span class="font-label-mono text-sm">88k</span>
+</div>
+</div>
+<h3 class="font-headline-md text-lg mb-2 text-on-surface">golang/go</h3>
+<p class="font-body-md text-on-surface-variant text-sm mb-6 line-clamp-2">The Go programming language. Simple, efficient, and reliable software at scale.</p>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-[#00ADD8]"></div>
+<span class="font-label-mono text-[12px]">Go</span>
+</div>
+</div>
+<button class="px-3 py-1.5 bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-lg text-[12px] font-bold hover:bg-tertiary/20 transition-all flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">magic_button</span>
+                        AI 引导
+                    </button>
+</div>
+</div>
+<!-- Repo Card 6 -->
+<div class="repo-card glass-panel p-6 rounded-2xl cursor-grab active:cursor-grabbing border-t-2 border-t-transparent hover:border-t-tertiary" draggable="true">
+<div class="flex justify-between items-start mb-4">
+<input class="rounded border-white/20 bg-transparent text-tertiary focus:ring-tertiary" type="checkbox"/>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">star</span>
+<span class="font-label-mono text-sm">22k</span>
+</div>
+</div>
+<h3 class="font-headline-md text-lg mb-2 text-on-surface">supabase/supabase</h3>
+<p class="font-body-md text-on-surface-variant text-sm mb-6 line-clamp-2">The open source Firebase alternative. Build your next project in minutes with Auth, Database, Functions.</p>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-[#3178c6]"></div>
+<span class="font-label-mono text-[12px]">TypeScript</span>
+</div>
+</div>
+<button class="px-3 py-1.5 bg-tertiary/10 text-tertiary border border-tertiary/20 rounded-lg text-[12px] font-bold hover:bg-tertiary/20 transition-all flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">magic_button</span>
+                        AI 引导
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Batch Action Bar -->
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 glass-panel px-8 py-4 rounded-2xl flex items-center gap-8 shadow-2xl transition-all duration-500 translate-y-32 opacity-0 z-50" id="batchActionBar">
+<div class="flex items-center gap-3 pr-8 border-r border-white/10">
+<span class="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-bold" id="selectedCount">12</span>
+<span class="font-label-mono text-sm">已选择项目</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 px-4 py-2 hover:bg-white/5 rounded-lg transition-all font-label-mono text-sm">
+<span class="material-symbols-outlined text-sm">drive_file_move</span>
+                移动到列表...
+            </button>
+<button class="flex items-center gap-2 px-4 py-2 text-error/80 hover:bg-error/10 rounded-lg transition-all font-label-mono text-sm">
+<span class="material-symbols-outlined text-sm">heart_minus</span>
+                取消收藏
+            </button>
+<button class="font-label-mono text-sm text-on-surface-variant hover:text-on-surface transition-all" id="cancelSelection">取消</button>
+</div>
+</div>
+<!-- Lasso Selection Helper -->
+<div class="lasso-selection hidden" id="lasso"></div>
+<script>
+        // Charts Initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            const chartTheme = {
+                textStyle: { fontFamily: 'Outfit', color: '#bbcabf' },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true }
+            };
+
+            const langChart = echarts.init(document.getElementById('languageChart'));
+            langChart.setOption({
+                ...chartTheme,
+                xAxis: { type: 'category', data: ['TS', 'JS', 'Py', 'Go', 'Rust', '其他'] },
+                yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } } },
+                series: [{
+                    data: [450, 320, 280, 150, 90, 48],
+                    type: 'bar',
+                    itemStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#4edea3' },
+                            { offset: 1, color: '#10b981' }
+                        ]),
+                        borderRadius: [4, 4, 0, 0]
+                    }
+                }]
+            });
+
+            const actChart = echarts.init(document.getElementById('activityChart'));
+            actChart.setOption({
+                ...chartTheme,
+                xAxis: { type: 'category', data: ['1月', '2月', '3月', '4月', '5月', '6月'] },
+                yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } } },
+                series: [{
+                    data: [820, 932, 901, 934, 1290, 1330],
+                    type: 'line',
+                    smooth: true,
+                    lineStyle: { color: '#4cd7f6', width: 3 },
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(76, 215, 246, 0.3)' },
+                            { offset: 1, color: 'transparent' }
+                        ])
+                    },
+                    itemStyle: { color: '#4cd7f6' }
+                }]
+            });
+
+            window.addEventListener('resize', () => {
+                langChart.resize();
+                actChart.resize();
+            });
+        });
+
+        // Interactive states: Selection & Batch Bar
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        const batchBar = document.getElementById('batchActionBar');
+        const countSpan = document.getElementById('selectedCount');
+        const cancelBtn = document.getElementById('cancelSelection');
+
+        const updateBatchBar = () => {
+            const checkedCount = Array.from(checkboxes).filter(c => c.checked).length;
+            if (checkedCount > 0) {
+                countSpan.innerText = checkedCount;
+                batchBar.classList.remove('translate-y-32', 'opacity-0');
+            } else {
+                batchBar.classList.add('translate-y-32', 'opacity-0');
+            }
+        };
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateBatchBar);
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            checkboxes.forEach(cb => cb.checked = false);
+            updateBatchBar();
+        });
+
+        // Drag & Drop Simulation
+        const cards = document.querySelectorAll('.repo-card');
+        const sideItems = document.querySelectorAll('nav ul li a');
+
+        cards.forEach(card => {
+            card.addEventListener('dragstart', (e) => {
+                card.style.opacity = '0.4';
+                e.dataTransfer.setData('text/plain', card.querySelector('h3').innerText);
+            });
+            card.addEventListener('dragend', () => {
+                card.style.opacity = '1';
+                sideItems.forEach(item => item.classList.remove('drag-over'));
+            });
+        });
+
+        sideItems.forEach(item => {
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                item.classList.add('drag-over');
+            });
+            item.addEventListener('dragleave', () => {
+                item.classList.remove('drag-over');
+            });
+            item.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const name = e.dataTransfer.getData('text/plain');
+                console.log(`Dropped ${name} into ${item.innerText}`);
+                item.classList.remove('drag-over');
+                // Pulse feedback
+                item.classList.add('bg-primary');
+                setTimeout(() => item.classList.remove('bg-primary'), 300);
+            });
+        });
+
+        // Lasso Selection
+        let lasso = document.getElementById('lasso');
+        let isLassoing = false;
+        let startX, startY;
+
+        window.addEventListener('mousedown', (e) => {
+            if (e.ctrlKey && e.button === 0) { // Ctrl + Left Click
+                isLassoing = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                lasso.style.left = startX + 'px';
+                lasso.style.top = startY + 'px';
+                lasso.style.width = '0px';
+                lasso.style.height = '0px';
+                lasso.classList.remove('hidden');
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isLassoing) return;
+            let currentX = e.clientX;
+            let currentY = e.clientY;
+
+            let width = Math.abs(currentX - startX);
+            let height = Math.abs(currentY - startY);
+            let left = (currentX < startX) ? currentX : startX;
+            let top = (currentY < startY) ? currentY : startY;
+
+            lasso.style.width = width + 'px';
+            lasso.style.height = height + 'px';
+            lasso.style.left = left + 'px';
+            lasso.style.top = top + 'px';
+
+            // Select cards within lasso
+            cards.forEach(card => {
+                let rect = card.getBoundingClientRect();
+                if (rect.left < left + width &&
+                    rect.left + rect.width > left &&
+                    rect.top < top + height &&
+                    rect.top + rect.height > top) {
+                    card.querySelector('input').checked = true;
+                }
+            });
+            updateBatchBar();
+        });
+
+        window.addEventListener('mouseup', () => {
+            isLassoing = false;
+            lasso.classList.add('hidden');
+        });
+    </script>
+</body></html>
